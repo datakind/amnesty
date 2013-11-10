@@ -37,6 +37,8 @@ import os
 import re
 import csv
 import datetime
+import pymongo
+
 
 INPUT_FILE = "/data/datakind/AI/Lotus Database.txt"
 OUTPUT_DIR = "/data/datakind/AI/lotus"
@@ -46,9 +48,10 @@ BAD_CHARACTER_REGEX = re.compile(r'[\r\xbb\xbf\xef\xef\xbf\xbd]')
 
 class UADoc(object):
 
-    __APPEAL_DATE_REGEX = re.compile(r"please send appeals before *([0-9]{1,2}) ?([a-z]+) ([0-9]{4})")
-    __ISSUE_DATE_REGEX  = re.compile(r"issue date: ([0-9]{1,2}) ?([a-z]+) ([0-9]{4})")
-    __COUNTRY_REGEX     = re.compile(r"subject: *.+ on (.+)$")
+    __APPEAL_DATE_REGEX = re.compile(r"please send appeals before *([0-9]{1,2}) *([a-z]+) +([0-9]{4})")
+    __ISSUE_DATE_REGEX  = re.compile(r"(issue )?date: ([0-9]{1,2}) *([a-z]+)[, ]+([0-9]{2,4})")
+    __ISSUE_DATE_REGEX2 = re.compile(r"issued on \(([0-9]{1,2}) ?([a-z]+) ([0-9]{2,4})\)")
+    __COUNTRY_REGEX     = re.compile(r"subject: *.+? on (.+)$")
     __RE_SUBJECT        = re.compile("subject: *(.+)")
     __GENDER_REGEX      = re.compile("gender m/f: *(.+)")
     __CATEGORY_REGEX    = re.compile("categories: *(.+)")
@@ -81,7 +84,7 @@ class UADoc(object):
         self.issue_date  = ""
         self.country     = ""
         self.gender      = ""
-        self.category    = ""
+        self.category    = [""]
         self.id          = ""
         self.action      = ""
 
@@ -97,16 +100,16 @@ class UADoc(object):
             if "please send appeals to arrive as quickly as possible" in line or "please send appeals immediately" in line:
                 self.appeal_date = "asap"
             else:
-                self.appeal_date = self.__extract_date(line, self.__ISSUE_DATE_REGEX)
+                self.appeal_date = self.__extract_date(line, self.__ISSUE_DATE_REGEX, match_offset=1)
 
         if self.issue_date == "":
-            self.issue_date = self.__extract_date(line, self.__ISSUE_DATE_REGEX)
+            self.issue_date = self.__extract_date(line, self.__ISSUE_DATE_REGEX, match_offset=1)
 
         if self.gender == "":
             self.gender = self.match_line(line, self.__GENDER_REGEX)
 
-        if self.category == "":
-            self.category = self.match_line(line, self.__CATEGORY_REGEX).replace(",", "|")
+        if self.category == [""]:
+            self.category = self.match_line(line, self.__CATEGORY_REGEX).split(",")
 
         self.text += line + "\n"
 
@@ -129,11 +132,15 @@ class UADoc(object):
             # get the country
             self.country = self.match_line(line, self.__COUNTRY_REGEX)
             if "/" in self.country:
-                print self.country
                 self.country, self.region = self.country.split("/", 1)
+            elif " issued on " in self.subject and self.issue_date == "":
+                self.issue_date = self.__extract_date(self.subject, self.__ISSUE_DATE_REGEX2)
+                if self.issue_date != "":
+                    self.country = self.country.split("issued on")[0]
             elif re.search(r"(.+) \(.+\)", self.country) is not None:
                 self.region = re.search(r"(.+) \((.+)\)", self.country).group(2)
                 self.country = re.search(r"(.+) \((.+)\)", self.country).group(1)
+
 
     def cleanup_text(self, line):
         """
@@ -150,10 +157,15 @@ class UADoc(object):
             return match.group(grp)
         return ""
 
-    def __extract_date(self, line, dt_regex, as_string=True):
+    def __extract_date(self, line, dt_regex, as_string=True, match_offset=0):
         dt = dt_regex.search(line)
         if dt is not None:
-            date_string = " ".join([dt.group(1), dt.group(2), dt.group(3)])
+            day = dt.group(1 + match_offset)
+            month = dt.group(2 + match_offset)
+            year = dt.group(3 + match_offset)
+            if len(year) == 2:
+                year = "20" + year
+            date_string = " ".join([day, month, year])
             return_date = datetime.datetime.strptime(date_string, "%d %B %Y")
             if as_string == True:
                 return return_date.strftime("%Y-%m-%d")
@@ -177,6 +189,9 @@ def debug_line(line):
 
 
 if __name__ == "__main__":
+    db = pymongo.Connection().datakind
+    db.drop_collection("data")
+
     fout = csv.writer(open(os.path.join(OUTPUT_DIR, "output.csv"), "wb"))
     fout.writerow([
         "document", "id", "subject",
@@ -191,28 +206,26 @@ if __name__ == "__main__":
 
         line = BAD_CHARACTER_REGEX.sub("", line.strip())
 
+        # document breaks on "from:" or "$file:"
         if line.startswith("from:") or "$file:" in line:
             if doc.text != "":
-                # print "writing document", file_count
-                # print "document length:", len(doc)
-                # print "subject:", doc.subject
-                # print "country:", doc.country
-                # print "gender:", doc.gender
-                # print "appeal_date:", doc.appeal_date
-                # print "issue_date:", doc.appeal_date
-                # print "---------------------------"
                 fout.writerow([
                     file_count, doc.id, doc.subject,
-                    doc.category, doc.country, doc.gender,
+                    "|".join(doc.category), doc.country, doc.gender,
                     doc.appeal_date, doc.issue_date, doc.action
                 ])
+                # if "issue date" in doc.text and doc.issue_date == "":
+                #     print doc.text
                 open(os.path.join(OUTPUT_DIR, str(file_count)), "wb").write(doc.text)
+
+                db.data.insert(doc.__dict__)
+
             doc = UADoc()
             file_count += 1
             continue
 
         doc.addline(line)
 
-        if line_number % 10000 == 0:
-            print "lines:", line_number/1000, "documents:", file_count
+        if line_number % 100000 == 0:
+            print "lines:", line_number, "documents:", file_count
     del(fout)
