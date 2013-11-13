@@ -49,6 +49,7 @@ BAD_CHARACTER_REGEX = re.compile(r'[\r\xbb\xbf\xef\xef\xbf\xbd]')
 
 class UADoc(object):
 
+    __ANY_DATE_REGEX    = re.compile(r"([0-9]{1,2}) *([a-z]+) +([0-9]{4})")
     __APPEAL_DATE_REGEX = re.compile(r"please send appeals before *([0-9]{1,2}) *([a-z]+) +([0-9]{4})")
     __ISSUE_DATE_REGEX  = re.compile(r"(issue )?date: ([0-9]{1,2}) *([a-z]+)[, ]+([0-9]{2,4})")
     __ISSUE_DATE_REGEX2 = re.compile(r"issued on \(([0-9]{1,2}) ?([a-z]+) ([0-9]{2,4})\)")
@@ -98,10 +99,7 @@ class UADoc(object):
             self.parse_subject(line)
 
         if self.appeal_date == "":
-            if "please send appeals to arrive as quickly as possible" in line or "please send appeals immediately" in line:
-                self.appeal_date = "asap"
-            else:
-                self.appeal_date = self.__extract_date(line, self.__ISSUE_DATE_REGEX, match_offset=1)
+            self.appeal_date = self.__extract_date(line, self.__ISSUE_DATE_REGEX, match_offset=1)
 
         if self.issue_date == "":
             self.issue_date = self.__extract_date(line, self.__ISSUE_DATE_REGEX, match_offset=1)
@@ -114,6 +112,15 @@ class UADoc(object):
 
         self.text += line + "\n"
 
+    def finalize(self):
+        """
+        Some things to run once the whole document has been (mostly) parsed.
+        """
+        # just grab every known date in the whole document
+        self.text = re.sub(r"\n+", " ", doc.text)
+        dates = self.__ANY_DATE_REGEX.findall(self.text)
+        dates = map(self.format_date, dates)
+        self.dates = list(dates)
 
 
     def parse_subject(self, line):
@@ -123,7 +130,7 @@ class UADoc(object):
             m = re.search(r"([0-9]{1,3}/[0-9]{1,3})", self.subject)
             if m is not None:
                 self.id = m.group(1)
-            
+
             # get the action
             if "stop action" in line:
                 self.action = "stop action"
@@ -164,29 +171,27 @@ class UADoc(object):
             day = dt.group(1 + match_offset)
             month = dt.group(2 + match_offset)
             year = dt.group(3 + match_offset)
+            return self.format_date((day, month, year))
+
+    @staticmethod
+    def format_date(dmy_tuple, as_string=True):
+        try:
+            day, month, year = dmy_tuple
             if len(year) == 2:
                 year = "20" + year
+            if len(day) == 1:
+                day = "0" + day
             date_string = " ".join([day, month, year])
             return_date = datetime.datetime.strptime(date_string, "%d %B %Y")
             if as_string == True:
                 return return_date.strftime("%Y-%m-%d")
             else:
                 return return_date
-        else:
-            if as_string == True:
-                return ""
-            else:
-                return datetime.datetime.fromtimestamp(0)
+        except:
+            return ""
 
     def __len__(self):
         return len(self.text)
-
-
-def debug_line(line):
-    # return
-    x = re.sub(r"[a-z0-9 ,;\.:=\\\/\(\)\$\-\+@]", "", line)
-    if x != "":
-        print x
 
 
 if __name__ == "__main__":
@@ -194,7 +199,7 @@ if __name__ == "__main__":
     # set up mongo db (running on localhost for now)
     db = pymongo.Connection().datakind
     db.drop_collection("data")
-    
+
     # set up the output directory for individual files
     if not os.path.exists(OUTPUT_DIR):
         os.makedirs(OUTPUT_DIR)
@@ -203,7 +208,7 @@ if __name__ == "__main__":
     fout.writerow([
         "document", "id", "subject",
         "category", "country", "gender",
-        "appeal_date", "issue_date", "action"
+        "appeal_date", "issue_date", "action","all_dates"
     ])
 
     fin = open(INPUT_FILE, "r")
@@ -216,15 +221,15 @@ if __name__ == "__main__":
         # document breaks on "from:" or "$file:"
         if line.startswith("from:") or "$file:" in line:
             if doc.text != "":
+                doc.finalize()
+
                 fout.writerow([
                     file_count, doc.id, doc.subject,
                     "|".join(doc.category), doc.country, doc.gender,
-                    doc.appeal_date, doc.issue_date, doc.action
+                    doc.appeal_date, doc.issue_date, doc.action, "|".join(doc.dates)
                 ])
-                # if "issue date" in doc.text and doc.issue_date == "":
-                #     print doc.text
-                open(os.path.join(OUTPUT_DIR, str(file_count)), "wb").write(doc.text)
 
+                open(os.path.join(OUTPUT_DIR, str(file_count)), "wb").write(doc.text)
                 db.data.insert(doc.__dict__)
 
             doc = UADoc()
