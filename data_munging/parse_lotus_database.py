@@ -40,8 +40,9 @@ import datetime
 import pymongo
 
 
-INPUT_FILE = "/data/datakind/AI/Lotus Database.txt"
-OUTPUT_DIR = "/data/datakind/AI/lotus"
+INPUT_FILE = "../raw_data/lotus_database.txt"
+OUTPUT_FILE = "../cleaned_data/lotus_database.csv"
+OUTPUT_DIR = "../cleaned_data/ua_files"
 
 BAD_CHARACTER_REGEX = re.compile(r'[\r\xbb\xbf\xef\xef\xbf\xbd]')
 
@@ -189,10 +190,16 @@ def debug_line(line):
 
 
 if __name__ == "__main__":
+
+    # set up mongo db (running on localhost for now)
     db = pymongo.Connection().datakind
     db.drop_collection("data")
+    
+    # set up the output directory for individual files
+    if not os.path.exists(OUTPUT_DIR):
+        os.makedirs(OUTPUT_DIR)
 
-    fout = csv.writer(open(os.path.join(OUTPUT_DIR, "output.csv"), "wb"))
+    fout = csv.writer(open(OUTPUT_FILE, "wb"))
     fout.writerow([
         "document", "id", "subject",
         "category", "country", "gender",
