@@ -2,35 +2,34 @@
 """
 This script extracts features from the raw Urgent Action files and writes them
 to a new file.
-
 Summary of the output so far:
 
-      document           id                                             subject     
- Min.   :    2          :  239                                            :  203  
- 1st Qu.: 5470   139/11 :   12   stop action to ex 13/98 on iran          :    3  
- Median : 8910   347/09 :   12   ua 152/12 on china                       :    3  
- Mean   : 8374   119/12 :   11   ua 156/12 on peru (issued on 1 june 2012):    3  
- 3rd Qu.:11660   22/01  :   11   ua 313/98 on mexico                      :    3  
- Max.   :14410   32/01  :   11   1st update to ua 258/05 on syria         :    2  
-                 (Other):10704   (Other)                                  :10783  
+      document              id                                           subject
+ Min.   :    2          :  239                                            :  203
+ 1st Qu.: 5470   139/11 :   12   stop action to ex 13/98 on iran          :    3
+ Median : 8910   347/09 :   12   ua 152/12 on china                       :    3
+ Mean   : 8374   119/12 :   11   ua 156/12 on peru (issued on 1 june 2012):    3
+ 3rd Qu.:11660   22/01  :   11   ua 313/98 on mexico                      :    3
+ Max.   :14410   32/01  :   11   1st update to ua 258/05 on syria         :    2
+                 (Other):10704   (Other)                                  :10783
 
-                                 category         country          gender     
-                                   :  308   usa     :1140           :10971  
- quotes                            :   16   iran    : 814   m       :   12  
- death penalty                     :    9   colombia: 508   both    :    5  
- fear for safety                   :    8   mexico  : 485   all male:    2  
- death penalty|ex 84/98|philippines:    7   syria   : 400   f       :    2  
- death penalty|usa                 :    7   nepal   : 382   all m   :    1  
- (Other)                           :10645   (Other) :7271   (Other) :    7  
+                                  category     country             gender
+                                   :  204   Mode:logical           :10971
+ quotes                            :   16   NA's:11000     m       :   12
+ death penalty                     :    9                  both    :    5
+ fear for safety                   :    8                  all male:    2
+ death penalty|ex 84/98|philippines:    7                  f       :    2
+ death penalty|usa                 :    7                  all m   :    1
+ (Other)                           :10749                  (Other) :    7
 
-     appeal_date        issue_date           action    
- asap      :7544             :9851              :6797  
-           :2307   2012-06-01:  10   stop action: 744  
- 2012-06-01:  10   2012-10-25:  10   update     :3459  
- 2012-10-25:  10   2012-05-11:   9                     
- 2012-05-11:   9   2012-05-18:   9                     
- 2012-05-18:   9   2011-09-13:   8                     
- (Other)   :1111   (Other)   :1103                     
+        appeal_date         issue_date            action          all_dates
+           :10008             :10926              :6797             :  490
+ 2012-05-03:    9   2013-04-15:    7   stop action: 744   2002-05-10:    5
+ 2012-12-06:    9   2013-04-24:    5   update     :3459   1999-01-29:    4
+ 2012-06-22:    8   2013-05-03:    5                      2000-11-06:    4
+ 2012-07-13:    8   2013-05-17:    5                      2001-07-03:    4
+ 2012-06-29:    7   2013-05-20:    5                      2002-03-28:    4
+ (Other)   :  951   (Other)   :   47                      (Other)   :10489
 """
 
 import os
@@ -49,17 +48,14 @@ BAD_CHARACTER_REGEX = re.compile(r'[\r\xbb\xbf\xef\xef\xbf\xbd]')
 
 class UADoc(object):
 
-    __ANY_DATE_REGEX    = re.compile(r"([0-9]{1,2}) *([a-z]+) +([0-9]{4})")
-    __APPEAL_DATE_REGEX = re.compile(r"please send appeals before *([0-9]{1,2}) *([a-z]+) +([0-9]{4})")
-    __ISSUE_DATE_REGEX  = re.compile(r"(issue )?date: ([0-9]{1,2}) *([a-z]+)[, ]+([0-9]{2,4})")
-    __ISSUE_DATE_REGEX2 = re.compile(r"issued on \(([0-9]{1,2}) ?([a-z]+) ([0-9]{2,4})\)")
-    __COUNTRY_REGEX     = re.compile(r"subject: *.+? on (.+)$")
-    __RE_SUBJECT        = re.compile("subject: *(.+)")
-    __GENDER_REGEX      = re.compile("gender m/f: *(.+)")
-    __CATEGORY_REGEX    = re.compile("categories: *(.+)")
+    ANY_DATE_REGEX    = re.compile(r"([0-9]{1,2}) *([a-z]+) +([0-9]{4})")
+    APPEAL_DATE_REGEX = re.compile(r"please send appeals before *?([0-9]{1,2}) *?([a-z]+?) +?([0-9]{4})")
+    GENDER_REGEX      = re.compile(r"gender m/f: *(.+?)\|")
+    CATEGORY_REGEX    = re.compile(r"\|categories: *(.+?)\|")
+    BODY_REGEX        = re.compile(r"\|body:(.+?)\|[^\| ]+:")
 
     # a total hack to fix typos.
-    __STRING_TRANSLATION = [
+    STRING_TRANSLATION = [
         ('united states of america', 'usa'),
         ('united states', 'usa'),
         ('occupied palestinian territories', 'israel/opt'),
@@ -95,36 +91,62 @@ class UADoc(object):
         As we add lines, this method will parse it.
         """
         line = self.cleanup_text(line)
-        if self.subject == "":
-            self.parse_subject(line)
-
-        if self.appeal_date == "":
-            self.appeal_date = self.__extract_date(line, self.__ISSUE_DATE_REGEX, match_offset=1)
-
-        if self.issue_date == "":
-            self.issue_date = self.__extract_date(line, self.__ISSUE_DATE_REGEX, match_offset=1)
-
-        if self.gender == "":
-            self.gender = self.match_line(line, self.__GENDER_REGEX)
-
-        if self.category == [""]:
-            self.category = self.match_line(line, self.__CATEGORY_REGEX).split(",")
-
-        self.text += line + "\n"
+        self.text += line + "|"
 
     def finalize(self):
         """
         Some things to run once the whole document has been (mostly) parsed.
         """
+        line = self.text
+        self.parse_subject()
+        self.parse_issue_date()
+
+        self.appeal_date = self.extract_date(self.APPEAL_DATE_REGEX, match_offset=0)
+
+        self.gender = self.match_line(self.GENDER_REGEX)
+
+        self.category = self.match_line(self.CATEGORY_REGEX).split(",")
+
+        body = self.match_line(self.BODY_REGEX)
+        self.body = re.sub("\|+", "\n", body)
+
+
         # just grab every known date in the whole document
-        self.text = re.sub(r"\n+", " ", doc.text)
-        dates = self.__ANY_DATE_REGEX.findall(self.text)
+        dates = self.ANY_DATE_REGEX.findall(self.text)
         dates = map(self.format_date, dates)
         self.dates = list(dates)
 
+    ISSUE_DATE_REGEX  = re.compile(r"(issue )?date: ([0-9]{1,2}) *?([a-z]+?)[, ]*?([0-9]{2,4})")
+    ISSUE_DATE_REGEX2 = re.compile(r"issued on \(([0-9]{1,2}) *?([a-z]+?) *?([0-9]{2,4})\)")
+    def parse_issue_date(self):
+        """
+        Issue dates come in a few different formats. We'll try them all.
+        """
+        self.issue_date = self.extract_date(self.ISSUE_DATE_REGEX2, line=self.subject)
+        if self.issue_date == "":
+            self.issue_date = self.extract_date(self.ISSUE_DATE_REGEX2)
+        if self.issue_date == "":
+            self.issue_date = self.extract_date(self.ISSUE_DATE_REGEX)
 
-    def parse_subject(self, line):
-        self.subject = self.match_line(line, self.__RE_SUBJECT)
+    def extract_date(self, dt_regex, match_offset=0, line=None):
+        """
+        Extracts a date from the text and returns it in YYYY-MM-DD format.
+
+        Input is a regular expression to use for the matching.
+        """
+        if line is None:
+            line = self.text
+        dt = dt_regex.search(line)
+        if dt is not None:
+            day = dt.group(1 + match_offset)
+            month = dt.group(2 + match_offset)
+            year = dt.group(3 + match_offset)
+            return self.format_date((day, month, year))
+
+    COUNTRY_REGEX     = re.compile(r"\|subject: *.+? on (.+?)\|")
+    RE_SUBJECT        = re.compile(r"subject: *(.+?)\|")
+    def parse_subject(self):
+        self.subject = self.match_line(self.RE_SUBJECT)
         if self.subject != "":
             # get the ID
             m = re.search(r"([0-9]{1,3}/[0-9]{1,3})", self.subject)
@@ -132,19 +154,15 @@ class UADoc(object):
                 self.id = m.group(1)
 
             # get the action
-            if "stop action" in line:
+            if "stop action" in self.subject:
                 self.action = "stop action"
-            elif "update" in line:
+            elif "update" in self.subject:
                 self.action = "update"
 
             # get the country
-            self.country = self.match_line(line, self.__COUNTRY_REGEX)
+            self.country = self.match_line(self.COUNTRY_REGEX, line=self.subject)
             if "/" in self.country:
                 self.country, self.region = self.country.split("/", 1)
-            elif " issued on " in self.subject and self.issue_date == "":
-                self.issue_date = self.__extract_date(self.subject, self.__ISSUE_DATE_REGEX2)
-                if self.issue_date != "":
-                    self.country = self.country.split("issued on")[0]
             elif re.search(r"(.+) \(.+\)", self.country) is not None:
                 self.region = re.search(r"(.+) \((.+)\)", self.country).group(2)
                 self.country = re.search(r"(.+) \((.+)\)", self.country).group(1)
@@ -154,27 +172,22 @@ class UADoc(object):
         """
         Performs some substitutions for country names or known typos
         """
-        for k, v in self.__STRING_TRANSLATION:
+        line = line.replace("|", "")
+        for k, v in self.STRING_TRANSLATION:
             if k in line:
                 text = line.replace(k, v)
         return line
 
-    def match_line(self, line, reg, grp=1):
+    def match_line(self, reg, grp=1, line=None):
+        if line is None:
+            line = self.text
         match = reg.search(line)
         if match is not None:
             return match.group(grp)
         return ""
 
-    def __extract_date(self, line, dt_regex, as_string=True, match_offset=0):
-        dt = dt_regex.search(line)
-        if dt is not None:
-            day = dt.group(1 + match_offset)
-            month = dt.group(2 + match_offset)
-            year = dt.group(3 + match_offset)
-            return self.format_date((day, month, year))
-
     @staticmethod
-    def format_date(dmy_tuple, as_string=True):
+    def format_date(dmy_tuple):
         try:
             day, month, year = dmy_tuple
             if len(year) == 2:
@@ -183,10 +196,7 @@ class UADoc(object):
                 day = "0" + day
             date_string = " ".join([day, month, year])
             return_date = datetime.datetime.strptime(date_string, "%d %B %Y")
-            if as_string == True:
-                return return_date.strftime("%Y-%m-%d")
-            else:
-                return return_date
+            return return_date.strftime("%Y-%m-%d")
         except:
             return ""
 
@@ -221,21 +231,30 @@ if __name__ == "__main__":
         # document breaks on "from:" or "$file:"
         if line.startswith("from:") or "$file:" in line:
             if doc.text != "":
+
+                # all of the collection is done. Parse the document.
                 doc.finalize()
 
+                # write output to csv.
                 fout.writerow([
                     file_count, doc.id, doc.subject,
                     "|".join(doc.category), doc.country, doc.gender,
                     doc.appeal_date, doc.issue_date, doc.action, "|".join(doc.dates)
                 ])
 
-                open(os.path.join(OUTPUT_DIR, str(file_count)), "wb").write(doc.text)
+                # write raw text to a file
+                open(os.path.join(OUTPUT_DIR, str(file_count)), "wb").write(doc.text.replace("|", "\n"))
+
+                # insert the data into mongo
                 db.data.insert(doc.__dict__)
 
+            # on to a new document
             doc = UADoc()
             file_count += 1
+
             continue
 
+        # if it's not a new document, add the line to the existing one.
         doc.addline(line)
 
         if line_number % 100000 == 0:
