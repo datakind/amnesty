@@ -159,8 +159,10 @@ class UADoc(object):
             elif "update" in self.subject:
                 self.action = "update"
 
+        line = self.subject if self.subject != "" else self.text
+        if self.country == "":
             # get the country
-            self.country = self.match_line(self.COUNTRY_REGEX, line=self.subject)
+            self.country = self.match_line(self.COUNTRY_REGEX, line=line)
             if "/" in self.country:
                 self.country, self.region = self.country.split("/", 1)
             elif re.search(r"(.+) \(.+\)", self.country) is not None:
