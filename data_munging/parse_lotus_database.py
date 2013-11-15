@@ -12,17 +12,15 @@ Summary of the output so far:
  3rd Qu.:11660   22/01  :   11   ua 313/98 on mexico                      :    3
  Max.   :14410   32/01  :   11   1st update to ua 258/05 on syria         :    2
                  (Other):10704   (Other)                                  :10783
-
-                                  category     country             gender
-                                   :  204   Mode:logical           :10971
- quotes                            :   16   NA's:11000     m       :   12
- death penalty                     :    9                  both    :    5
- fear for safety                   :    8                  all male:    2
- death penalty|ex 84/98|philippines:    7                  f       :    2
- death penalty|usa                 :    7                  all m   :    1
- (Other)                           :10749                  (Other) :    7
-
-        appeal_date         issue_date            action          all_dates
+                               category         country          gender
+                                   :  204           :9839           :10971
+ quotes                            :   16    bahrain:  85   m       :   12
+ death penalty                     :    9    syria  :  79   both    :    5
+ fear for safety                   :    8    mexico :  62   all male:    2
+ death penalty|ex 84/98|philippines:    7    sudan  :  56   f       :    2
+ death penalty|usa                 :    7    usa    :  54   all m   :    1
+ (Other)                           :10749   (Other) : 825   (Other) :    7
+     appeal_date         issue_date            action          all_dates
            :10008             :10926              :6797             :  490
  2012-05-03:    9   2013-04-15:    7   stop action: 744   2002-05-10:    5
  2012-12-06:    9   2013-04-24:    5   update     :3459   1999-01-29:    4
@@ -99,6 +97,9 @@ class UADoc(object):
         """
         line = self.text
         self.parse_subject()
+
+        self.parse_country()
+
         self.parse_issue_date()
 
         self.appeal_date = self.extract_date(self.APPEAL_DATE_REGEX, match_offset=0)
@@ -109,7 +110,6 @@ class UADoc(object):
 
         body = self.match_line(self.BODY_REGEX)
         self.body = re.sub("\|+", "\n", body)
-
 
         # just grab every known date in the whole document
         dates = self.ANY_DATE_REGEX.findall(self.text)
@@ -143,7 +143,6 @@ class UADoc(object):
             year = dt.group(3 + match_offset)
             return self.format_date((day, month, year))
 
-    COUNTRY_REGEX     = re.compile(r"\|subject: *.+? on (.+?)\|")
     RE_SUBJECT        = re.compile(r"subject: *(.+?)\|")
     def parse_subject(self):
         self.subject = self.match_line(self.RE_SUBJECT)
@@ -159,15 +158,18 @@ class UADoc(object):
             elif "update" in self.subject:
                 self.action = "update"
 
-        line = self.subject if self.subject != "" else self.text
-        if self.country == "":
-            # get the country
-            self.country = self.match_line(self.COUNTRY_REGEX, line=line)
-            if "/" in self.country:
-                self.country, self.region = self.country.split("/", 1)
-            elif re.search(r"(.+) \(.+\)", self.country) is not None:
-                self.region = re.search(r"(.+) \((.+)\)", self.country).group(2)
-                self.country = re.search(r"(.+) \((.+)\)", self.country).group(1)
+    COUNTRY_REGEX = re.compile(r"\|country: *?(.+?)\|")
+    REGION_REGEX  = re.compile(r"(.+) \((.+)\)")
+    def parse_country(self):
+        line = self.text
+        # get the country
+        self.country = self.match_line(self.COUNTRY_REGEX, line=line)
+        if "/" in self.country:
+            self.country, self.region = self.country.split("/", 1)
+        elif self.REGION_REGEX.search(self.country) is not None:
+            match = self.REGION_REGEX.search(self.country)
+            self.country = match.group(1)
+            self.region = match.group(2)
 
 
     def cleanup_text(self, line):
