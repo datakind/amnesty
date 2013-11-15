@@ -13,21 +13,21 @@ Summary of the output so far:
  Max.   :14410   32/01  :   11   1st update to ua 258/05 on syria         :    2
                  (Other):10704   (Other)                                  :10783
                                category         country          gender
-                                   :  204           :9839           :10971
- quotes                            :   16    bahrain:  85   m       :   12
- death penalty                     :    9    syria  :  79   both    :    5
- fear for safety                   :    8    mexico :  62   all male:    2
- death penalty|ex 84/98|philippines:    7    sudan  :  56   f       :    2
- death penalty|usa                 :    7    usa    :  54   all m   :    1
- (Other)                           :10749   (Other) : 825   (Other) :    7
-     appeal_date         issue_date            action          all_dates
-           :10008             :10926              :6797             :  490
- 2012-05-03:    9   2013-04-15:    7   stop action: 744   2002-05-10:    5
- 2012-12-06:    9   2013-04-24:    5   update     :3459   1999-01-29:    4
- 2012-06-22:    8   2013-05-03:    5                      2000-11-06:    4
- 2012-07-13:    8   2013-05-17:    5                      2001-07-03:    4
- 2012-06-29:    7   2013-05-20:    5                      2002-03-28:    4
- (Other)   :  951   (Other)   :   47                      (Other)   :10489
+                                   :  204   usa     : 986           :10971
+ quotes                            :   16   iran    : 697   m       :   12
+ death penalty                     :    9   colombia: 502   both    :    5
+ fear for safety                   :    8   mexico  : 458   all male:    2
+ death penalty|ex 84/98|philippines:    7   syria   : 375   f       :    2
+ death penalty|usa                 :    7   nepal   : 358   all m   :    1
+ (Other)                           :10749   (Other) :7624   (Other) :    7
+     appeal_date         issue_date           action          all_dates
+           :10008             :7244              :6797             :  490
+ 2012-05-03:    9   1998-10-21:  11   stop action: 744   2002-05-10:    5
+ 2012-12-06:    9   1999-01-29:  10   update     :3459   1999-01-29:    4
+ 2012-06-22:    8   2003-02-21:  10                      2000-11-06:    4
+ 2012-07-13:    8   2005-05-25:  10                      2001-07-03:    4
+ 2012-06-29:    7   2012-06-01:  10                      2002-03-28:    4
+ (Other)   :  951   (Other)   :3705                      (Other)   :10489
 """
 
 import os
@@ -116,17 +116,52 @@ class UADoc(object):
         dates = map(self.format_date, dates)
         self.dates = list(dates)
 
-    ISSUE_DATE_REGEX  = re.compile(r"(issue )?date: ([0-9]{1,2}) *?([a-z]+?)[, ]*?([0-9]{2,4})")
-    ISSUE_DATE_REGEX2 = re.compile(r"issued on \(([0-9]{1,2}) *?([a-z]+?) *?([0-9]{2,4})\)")
+    ISSUE_DATE_REGEX  = re.compile(r"issue date\: *?([0-9]{1,2}) *?([a-z]+?)[, ]*?([0-9]{2,4})")
+    ISSUE_DATE_REGEX2 = re.compile(r"issued ?o?n? \(?([0-9]{1,2}) *?([a-z]+?) *?([0-9]{2,4})\)?")
+    ISSUE_DATE_REGEX3 = re.compile(r"issued ([0-9]{1,2}) *?([a-z]+?) *?([0-9]{2,4})")
+    ISSUE_DATE_REGEX4 = re.compile(r"\(([0-9]{1,2}) *?([a-z]+?) *?([0-9]{2,4})\)")
+    ISSUE_DATE_REGEX5 = re.compile(r"issue date\: ([a-z]+?) *?([0-9]{1,2})[, ]*?([0-9]{2,4})")
     def parse_issue_date(self):
         """
         Issue dates come in a few different formats. We'll try them all.
         """
+        self.issue_date_version = -1
+
         self.issue_date = self.extract_date(self.ISSUE_DATE_REGEX2, line=self.subject)
-        if self.issue_date == "":
-            self.issue_date = self.extract_date(self.ISSUE_DATE_REGEX2)
-        if self.issue_date == "":
-            self.issue_date = self.extract_date(self.ISSUE_DATE_REGEX)
+        if self.issue_date != "":
+            self.issue_date_version = 0
+            return
+
+        self.issue_date = self.extract_date(self.ISSUE_DATE_REGEX2)
+
+        if self.issue_date != "":
+            self.issue_date_version = 1
+            return
+
+        self.issue_date = self.extract_date(self.ISSUE_DATE_REGEX3)
+
+        if self.issue_date != "":
+            self.issue_date_version = 2
+            return
+
+        self.issue_date = self.extract_date(self.ISSUE_DATE_REGEX)
+
+        if self.issue_date != "":
+            self.issue_date_version = 3
+            return
+
+        self.issue_date = self.extract_date(self.ISSUE_DATE_REGEX4, line=self.subject)
+
+        if self.issue_date != "":
+            self.issue_date_version = 4
+            return
+
+        match = self.ISSUE_DATE_REGEX5.search(self.text)
+        if match is not None:
+            self.issue_date = self.format_date((match.group(2), match.group(1), match.group(3)))
+
+        if self.issue_date != "":
+            self.issue_date_version = 5
 
     def extract_date(self, dt_regex, match_offset=0, line=None):
         """
@@ -142,6 +177,7 @@ class UADoc(object):
             month = dt.group(2 + match_offset)
             year = dt.group(3 + match_offset)
             return self.format_date((day, month, year))
+        return ""
 
     SUBJECT_REGEX = re.compile(r"subject: *?(.+?)\|")
     def parse_subject(self):
