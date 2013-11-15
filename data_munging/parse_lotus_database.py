@@ -143,14 +143,14 @@ class UADoc(object):
             year = dt.group(3 + match_offset)
             return self.format_date((day, month, year))
 
-    RE_SUBJECT        = re.compile(r"subject: *(.+?)\|")
+    SUBJECT_REGEX = re.compile(r"subject: *?(.+?)\|")
     def parse_subject(self):
-        self.subject = self.match_line(self.RE_SUBJECT)
+        self.subject = self.match_line(self.SUBJECT_REGEX)
         if self.subject != "":
             # get the ID
             m = re.search(r"([0-9]{1,3}/[0-9]{1,3})", self.subject)
             if m is not None:
-                self.id = m.group(1)
+                self.id = m.group(1).strip()
 
             # get the action
             if "stop action" in self.subject:
@@ -160,16 +160,21 @@ class UADoc(object):
 
     COUNTRY_REGEX = re.compile(r"\|country: *?(.+?)\|")
     REGION_REGEX  = re.compile(r"(.+) \((.+)\)")
+    COUNTRY_REGEX2 = re.compile(r"\|subject: *[^\|]+? on ([^\|]+)\|")
     def parse_country(self):
-        line = self.text
         # get the country
-        self.country = self.match_line(self.COUNTRY_REGEX, line=line)
+        self.country = self.match_line(self.COUNTRY_REGEX)
+        if self.country == "":
+            self.country = self.match_line(self.COUNTRY_REGEX2)
+
+        # see if there's a region and split that out.
         if "/" in self.country:
             self.country, self.region = self.country.split("/", 1)
         elif self.REGION_REGEX.search(self.country) is not None:
             match = self.REGION_REGEX.search(self.country)
             self.country = match.group(1)
             self.region = match.group(2)
+
 
 
     def cleanup_text(self, line):
@@ -187,7 +192,7 @@ class UADoc(object):
             line = self.text
         match = reg.search(line)
         if match is not None:
-            return match.group(grp)
+            return match.group(grp).strip()
         return ""
 
     @staticmethod
