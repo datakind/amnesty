@@ -13,7 +13,11 @@ This repo is the home for all project-related code.  Folders for munging, analys
 Information about the project can be found on the [project hackpad](https://nycdatadive2013.hackpad.com/AMNESTY-INTERNATIONAL-Text-Analysis-of-Humanitarian-Emergencies-YH0NV2A8HUj).  There you'll find details about the project Data Ambassadors, volunteers, tasks, and goals.  
 
 ## Data
-All of the data for dive-related tasks can be found on the [project dropbox](https://www.dropbox.com/home/Amnesty%20Public).  If you'd like to add data files talk to a Data Ambassador and they will share the folder with you.
+
+Current versions:
+
+* Clean data, updated 3:30pm [https://www.dropbox.com/s/mpdwzgnoq2tvvds/lotus_database.csv](https://www.dropbox.com/s/mpdwzgnoq2tvvds/lotus_database.csv)
+* Clean data with ISO country codes, updated 3:30pm [https://www.dropbox.com/s/ngr0qsdgs6t3zpy/lotus_database_w_iso3.csv](https://www.dropbox.com/s/ngr0qsdgs6t3zpy/lotus_database_w_iso3.csv)
 
 To build the data locally (on a *nix system):
 ``` bash
