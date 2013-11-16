@@ -23,3 +23,10 @@ python build_db.py
 ```
 python api.py
 ```
+
+## Query API
+This is the endpoint:
+```
+http://54.242.238.152:5000/?q=SELECT * FROM amnesty LIMIT 5
+```
+Where `q` signifies a SQL query
