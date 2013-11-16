@@ -87,6 +87,8 @@ class UADoc(object):
         self.category    = [""]
         self.id          = ""
         self.action      = ""
+        self.year        = ""
+        self.year_case_count = ""
 
     def addline(self, line):
         """
@@ -119,6 +121,25 @@ class UADoc(object):
         dates = self.ANY_DATE_REGEX.findall(self.text)
         dates = map(self.format_date, dates)
         self.dates = list(dates)
+
+        # extract the year/action count from the id.
+        self.extract_year_info()
+
+
+    ID_YEAR_REGEX = re.compile(r'([0-9]){1,4}\/([0-9]){2}')
+    def extract_year_info(self):
+        # The UA id is the (action # in the year) / (year)
+        match = self.ID_YEAR_REGEX.search(self.id)
+        if match is not None:
+            self.year_case_count = match.group(1)
+            self.year = int(match.group(2))
+
+            # we found a match. add the right century then convert back to a string.
+            if self.year > 50:
+                self.year += 1900
+            elif self.year < 20:
+                self.year += 2000      
+            self.year = str(self.year)
 
     ISSUE_DATE_REGEX  = re.compile(r"issue date\: *?([0-9]{1,2}) *?([a-z]+?)[, ]*?([0-9]{2,4})")
     ISSUE_DATE_REGEX2 = re.compile(r"issued ?o?n? \(?([0-9]{1,2}) *?([a-z]+?) *?([0-9]{2,4})\)?")
@@ -274,7 +295,7 @@ def main():
 
     fout = csv.writer(open(OUTPUT_FILE, "wb"))
     fout.writerow([
-        "document", "id", "subject",
+        "document", "id", "subject", "year", "year_case_count",
         "category", "country", "gender",
         "appeal_date", "issue_date", "action","all_dates","body"
     ])
@@ -304,7 +325,7 @@ def main():
 
                 # write output to csv.
                 fout.writerow([
-                    file_count, doc.id, doc.subject,
+                    file_count, doc.id, doc.subject, doc.year, doc.year_case_count,
                     "|".join(doc.category), doc.country, doc.gender,
                     doc.appeal_date, doc.issue_date, doc.action, "|".join(doc.dates), doc.body.replace("\n", "|")
                 ])
