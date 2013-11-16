@@ -56,6 +56,7 @@ class UADoc(object):
     CATEGORY_REGEX    = re.compile(r"\|categories: *(.+?)\|")
     BODY_REGEX        = re.compile(r"\|body:(.+?)\|[^\| ]+:")
 
+
     # a total hack to fix typos.
     STRING_TRANSLATION = [
         ('united states of america', 'usa'),
@@ -184,6 +185,7 @@ class UADoc(object):
         return ""
 
     SUBJECT_REGEX = re.compile(r"subject: *?(.+?)\|")
+
     def parse_subject(self):
         self.subject = self.match_line(self.SUBJECT_REGEX)
         if self.subject != "":
@@ -192,11 +194,28 @@ class UADoc(object):
             if m is not None:
                 self.id = m.group(1).strip()
 
+            ACTION_REGEX = re.compile(r"(.*?)ua")
+            m_action  = ACTION_REGEX.search(self.subject)
+            if m_action is not None:
+                self.action = m_action.group(1).strip()
+            
+            if self.action != "":
+                self.action = re.sub('\ on','',self.action)
+                self.action = re.sub('\ to','',self.action)
+                self.action = re.sub('\ of','',self.action)
+            else:
+                self.action = "initial"
+        
+            if m_action is None:
+                self.action = "unknown"
+
             # get the action
-            if "stop action" in self.subject:
-                self.action = "stop action"
-            elif "update" in self.subject:
-                self.action = "update"
+#            if "stop action" in self.subject:
+#                self.action = "stop action"
+#            elif "update" in self.subject:
+#                self.action = "update"
+                
+    
 
     COUNTRY_REGEX = re.compile(r"\|country: *?(.+?)\|")
     REGION_REGEX  = re.compile(r"(.+) \((.+)\)")
@@ -230,6 +249,7 @@ class UADoc(object):
     def match_line(self, reg, grp=1, line=None):
         if line is None:
             line = self.text
+
         match = reg.search(line)
         if match is not None:
             return match.group(grp).strip()
@@ -319,6 +339,8 @@ def main():
             # on to a new document
             doc = UADoc()
             file_count += 1
+            #if file_count>100:
+            #    break
 
             continue
         # if it's not a new document, add the line to the existing one.
