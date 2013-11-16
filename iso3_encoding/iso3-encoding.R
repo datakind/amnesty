@@ -15,7 +15,6 @@ iso3_category <- countrycode(ai$category, "country.name", "iso3c") # Coding into
 
 iso3 <- cbind(iso3_country, iso3_subject, iso3_category) # unifying
 
-# Adding columns (the safe way). 
-ai2 <- cbind(ai, iso3)
+ai2 <- cbind(ai, iso3) # Adding columns (the safe way). 
 
-write.csv(ai, file="../cleaned_data/lotus_database_w_iso3.csv") # output.
+write.csv(ai2, file="../cleaned_data/lotus_database_w_iso3.csv") # output.
