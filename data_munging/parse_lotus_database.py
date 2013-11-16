@@ -33,8 +33,12 @@ Summary of the output so far:
 import os
 import re
 import csv
+import sys
 import datetime
-import pymongo
+USE_DB = False
+if "mongo" in sys.argv:
+    USE_DB = True
+    import pymongo
 
 
 INPUT_FILE = "../raw_data/lotus_database.txt"
@@ -257,11 +261,12 @@ class UADoc(object):
                 return True
             return True
 
-if __name__ == "__main__":
+def main():
 
     # set up mongo db (running on localhost for now)
-    db = pymongo.Connection().datakind
-    db.drop_collection("data")
+    if USE_DB:
+        db = pymongo.Connection().datakind
+        db.drop_collection("data")
 
     # set up the output directory for individual files
     if not os.path.exists(OUTPUT_DIR):
@@ -308,7 +313,8 @@ if __name__ == "__main__":
                 open(os.path.join(OUTPUT_DIR, str(file_count)), "wb").write(doc.text.replace("|", "\n"))
 
                 # insert the data into mongo
-                db.data.insert(doc.__dict__)
+                if USE_DB == True:
+                    db.data.insert(doc.__dict__)
 
             # on to a new document
             doc = UADoc()
@@ -321,3 +327,6 @@ if __name__ == "__main__":
         if line_number % 10000 == 0:
             print "lines:", line_number, "documents:", file_count
     del(fout)
+
+if __name__ == "__main__":
+    main()
