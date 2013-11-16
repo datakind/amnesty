@@ -248,6 +248,14 @@ class UADoc(object):
     def __len__(self):
         return len(self.text)
 
+    @staticmethod
+    def is_document_break(line, previous_line):
+        if "$file:" in line:
+            return True
+        if line.startswith("from:"):
+            if "$file" in previous_line:
+                return True
+            return True
 
 if __name__ == "__main__":
 
@@ -269,12 +277,21 @@ if __name__ == "__main__":
     fin = open(INPUT_FILE, "r")
     file_count = 0
     doc = UADoc()
+    line = ""
+    previous_line = ""
+
     for line_number, line in enumerate(fin.readlines()):
 
+        # hold onto the previous line value. we'll need this in determining
+        # document breaks
+        if line != "":
+            previous_line = line
+
+        # grab the next line
         line = BAD_CHARACTER_REGEX.sub("", line.strip())
 
         # document breaks on "from:" or "$file:"
-        if line.startswith("from:") or "$file:" in line:
+        if doc.is_document_break(line, previous_line):
             if doc.text != "":
 
                 # all of the collection is done. Parse the document.
@@ -298,10 +315,9 @@ if __name__ == "__main__":
             file_count += 1
 
             continue
-
         # if it's not a new document, add the line to the existing one.
         doc.addline(line)
 
-        if line_number % 100000 == 0:
+        if line_number % 10000 == 0:
             print "lines:", line_number, "documents:", file_count
     del(fout)
