@@ -1,11 +1,11 @@
 import flask
-from flask import request
+from flask import Flask, Response, request
 import json
 import dataset
 import os
 import json
 
-app = flask.Flask(__name__)
+app = Flask(__name__)
 db_url = os.getenv('DATABASE_URL')
 db = dataset.connect(db_url)
 
