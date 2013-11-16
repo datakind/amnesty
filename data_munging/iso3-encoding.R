@@ -13,7 +13,9 @@ iso3_country <- countrycode(ai$country, "country.name", "iso3c") # Coding into I
 iso3_subject <- countrycode(ai$subject, "country.name", "iso3c") # Coding into ISO3. 
 iso3_category <- countrycode(ai$category, "country.name", "iso3c") # Coding into ISO3. 
 
-iso3 <- cbind(iso3_country, iso3_subject, iso3_category) # unifying
+iso3 <- iso3_country
+iso3[is.na(ios3)] <- iso3_subject[is.na(iso3)]
+iso3[is.na(ios3)] <- iso3_category[is.na(iso3)]
 
 ai2 <- cbind(ai, iso3) # Adding columns (the safe way). 
 
