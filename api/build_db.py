@@ -3,7 +3,9 @@ import os
 import csv
 
 db_url = os.getenv('DATABASE_URL')
+print db_url
 db = dataset.connect(db_url)
+table = db['amnesty']
 
 # read in csv
 fieldnames = (
@@ -21,9 +23,7 @@ fieldnames = (
   "action",
   "all_dates",
   "body",
-  "iso3_country",
-  "iso3_subject",
-  "iso3_category"
+  "iso3"
 )
 
 f = open( '../cleaned_data/lotus_database_w_iso3.csv', 'r' )
@@ -58,5 +58,4 @@ for row in raw_data:
   clean_data.append(new_row)
 
 print "inserting data into postgres"
-db['amnesty'].delete()
-db['amnesty'].insert_many(clean_data)
+table.insert_many(clean_data)
