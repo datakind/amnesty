@@ -21,12 +21,14 @@ fieldnames = (
   "all_dates",
   "body"
 )
+
 f = open( '../cleaned_data/lotus_database.csv', 'r' )
 reader = csv.DictReader(f, fieldnames = fieldnames)
-for row in reader:
-  print reader
+raw_data = []
+for i, r in enumerate(reader):
+  if i > 0:
+    raw_data.append(r)
 
-print raw_data[0]
 clean_data = []
 for row in raw_data:
   new_row = {}
@@ -42,7 +44,6 @@ for row in raw_data:
       if v is None:
         new_row['year'] = None
       else:
-        print v
         new_row['year'] = int(v.strip())
     else:
       new_row[k] = v
