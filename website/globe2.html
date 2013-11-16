@@ -1,0 +1,211 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
+    <script type="text/javascript" src="http://mbostock.github.io/d3/talk/20111018/d3/d3.js"></script>
+    <script type="text/javascript" src="populations.js"></script>
+    <script type="text/javascript" src="http://mbostock.github.io/d3/talk/20111018/d3/d3.geo.js"></script>
+    <!--<link type="text/css" rel="stylesheet" href="http://mbostock.github.io/d3/talk/20111018/style.css"/>-->
+    <link type="text/css" rel="stylesheet" href="http://mbostock.github.io/d3/talk/20111018/colorbrewer/colorbrewer.css"/>
+    <link type="text/css" rel="stylesheet" href="css/bootstrap.css">
+    <style type="text/css">
+
+svg {
+  width: 760px;
+  height: 760px;
+  pointer-events: all;
+}
+
+circle {
+  fill: #dbe4f0;
+}
+
+path {
+  /*fill: #aff;*/
+  stroke: #fff;
+}
+
+    </style>
+  </head>
+  <body>
+  	<div class="container">
+	  	<div class="row">
+		  	<h1>Amnesty!</h1>
+	  	</div>
+	  	<div class="col-md-8" id="DataDash">
+		  	<div class="row" style="border: 1px solid black; height: 200px;">
+			  	Featured Cases
+		  	</div>
+		  	<div class="row">
+		        Amnesty UA Events
+		        <div class="hint">drag to rotate</div>
+		        <!--<div><select>
+		          <option value="equalarea">equalarea</option>
+		          <option value="equidistant">equidistant</option>
+		          <option value="gnomonic">gnomonic</option>
+		          <option value="orthographic" selected>orthographic</option>
+		          <option value="stereographic">stereographic</option>
+		        </select></div>-->
+		        <div><select id="metricPicker">
+		          <option value="">-- pick metric --</option>
+		          <option value="total">Total Number of Incidents</option>
+		          <option value="total">Total Number of People Involved</option>
+		          <option value="total">People Involved Normalized By Population</option>
+		        </select></div>
+		  	</div>
+			<div class="row">
+				<div id="globe"></div>
+		  	</div>
+	  	</div>
+	  	<div class="col-md-4" id="DataSidebar">
+		  	<h3 style="text-align: center">Alerts Dash</h3>
+			  	<div style="height:100px; 	border: 1px solid black;">
+				  	Key stats
+			  	</div>
+			  	<div style="height:100px; 	border: 1px solid black;">
+				  	News
+			  	</div>
+			  	<div style="height:100px; 	border: 1px solid black;">
+				  	Ending soon
+			  	</div>
+			  	<div style="height:100px; 	border: 1px solid black;">
+				  	Accomplishments/resolved
+			  	</div>
+			  	<div style="height:100px; 	border: 1px solid black;">
+				  	Twitter feed
+			  	</div>
+			  	<div style="height:100px; 	border: 1px solid black;">
+				  	Facebook feed
+			  	</div>
+	  	</div>
+  	</div>
+    <script type="text/javascript">
+
+var feature;
+
+var projection = d3.geo.azimuthal()
+    .scale(380)
+    .origin([-71.03,42.37])
+    .mode("orthographic")
+    .translate([380, 380]);
+
+var circle = d3.geo.greatCircle()
+    .origin(projection.origin());
+
+// TODO fix d3.geo.azimuthal to be consistent with scale
+var scale = {
+  orthographic: 380,
+  stereographic: 380,
+  gnomonic: 380,
+  equidistant: 380 / Math.PI * 2,
+  equalarea: 380 / Math.SQRT2
+};
+
+var path = d3.geo.path()
+    .projection(projection);
+
+var svg = d3.select("#globe").append("svg:svg")
+    .attr("width", 760)
+    .attr("height", 760)
+    .on("mousedown", mousedown);
+
+
+var theData, countMin=0, colorScale;
+var maxes = {"count":0,"population":0,"countPerMillion":0}
+var fields = ["count","population","countPerMillion"];
+
+var theField = "countPerMillion";
+
+d3.json("world-countries.json", function(collection) {
+	theData=collection.features;
+	d3.json("baseCount.json", function(counts) {
+	//countMax = d3.max()
+	
+	countMax=0;
+	for(var i in theData){
+		var countryKey = theData[i]["id"];
+		//console.log(theData[i]["id"]);
+
+		if(counts[countryKey]){
+			theData[i]["count"]=counts[countryKey]["count"];
+			theData[i]["population"]=populations[countryKey];
+			theData[i]["countPerMillion"]=counts[countryKey]["count"]/(populations[countryKey]/1000000.);
+			for(j in fields){
+				var f=fields[j];
+				maxes[f] = (maxes[f]<theData[i][f])?theData[i][f]:maxes[f];
+			}
+		}
+	}
+	
+	colourScale = d3.scale.linear()
+	    .domain([0, maxes[theField]])
+	    .range([90,0]);
+
+
+	  feature = svg.selectAll("path")
+	      .data(theData)
+	    .enter().append("svg:path")
+	      .attr("d", clip)
+	      //.attr("fill","hsl(100,50%,50%)");
+	      .attr("fill",function(d){
+			  if(d["count"]){return "hsl(0,60%,"+colourScale(d[theField])+"%)";}
+			  else{return "lightgrey";}
+		  	})
+		  .on("click",function(d){console.log(colourScale(d[theField])); alert("Population:\t\t\t"+d["population"]+"\nNumber of UAs:\t\t"+d["count"]+"\nNumber per million:\t"+d["countPerMillion"])});
+	
+	  feature.append("svg:title")
+	      .text(function(d) { return d.properties.name; });
+	
+	});
+});
+
+d3.select(window)
+    .on("mousemove", mousemove)
+    .on("mouseup", mouseup);
+
+
+d3.select("select").on("change", function() {
+  projection.mode(this.value).scale(scale[this.value]);
+  refresh(750);
+});
+
+var m0,
+    o0;
+
+function mousedown() {
+  m0 = [d3.event.pageX, d3.event.pageY];
+  o0 = projection.origin();
+  d3.event.preventDefault();
+}
+
+function mousemove() {
+  if (m0) {
+    var m1 = [d3.event.pageX, d3.event.pageY],
+        o1 = [o0[0] + (m0[0] - m1[0]) / 8, o0[1] + (m1[1] - m0[1]) / 8];
+    projection.origin(o1);
+    circle.origin(o1)
+    refresh();
+  }
+}
+
+function mouseup() {
+  if (m0) {
+    mousemove();
+    m0 = null;
+  }
+}
+
+function refresh(duration) {
+  (duration ? feature.transition().duration(duration) : feature).attr("d", clip);
+}
+
+function clip(d) {
+  return path(circle.clip(d));
+}
+
+    </script>
+    <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
+    <script src="lib/bootstrap.min.js"></script>
+  </body>
+</html>
