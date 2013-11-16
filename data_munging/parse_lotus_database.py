@@ -276,7 +276,7 @@ def main():
     fout.writerow([
         "document", "id", "subject",
         "category", "country", "gender",
-        "appeal_date", "issue_date", "action","all_dates"
+        "appeal_date", "issue_date", "action","all_dates","body"
     ])
 
     fin = open(INPUT_FILE, "r")
@@ -306,7 +306,7 @@ def main():
                 fout.writerow([
                     file_count, doc.id, doc.subject,
                     "|".join(doc.category), doc.country, doc.gender,
-                    doc.appeal_date, doc.issue_date, doc.action, "|".join(doc.dates)
+                    doc.appeal_date, doc.issue_date, doc.action, "|".join(doc.dates), doc.body.replace("\n", "|")
                 ])
 
                 # write raw text to a file
