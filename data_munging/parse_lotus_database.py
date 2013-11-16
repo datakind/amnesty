@@ -12,31 +12,33 @@ Summary of the output so far:
  3rd Qu.:11660   22/01  :   11   ua 313/98 on mexico                      :    3
  Max.   :14410   32/01  :   11   1st update to ua 258/05 on syria         :    2
                  (Other):10704   (Other)                                  :10783
-
-                                  category     country             gender
-                                   :  204   Mode:logical           :10971
- quotes                            :   16   NA's:11000     m       :   12
- death penalty                     :    9                  both    :    5
- fear for safety                   :    8                  all male:    2
- death penalty|ex 84/98|philippines:    7                  f       :    2
- death penalty|usa                 :    7                  all m   :    1
- (Other)                           :10749                  (Other) :    7
-
-        appeal_date         issue_date            action          all_dates
-           :10008             :10926              :6797             :  490
- 2012-05-03:    9   2013-04-15:    7   stop action: 744   2002-05-10:    5
- 2012-12-06:    9   2013-04-24:    5   update     :3459   1999-01-29:    4
- 2012-06-22:    8   2013-05-03:    5                      2000-11-06:    4
- 2012-07-13:    8   2013-05-17:    5                      2001-07-03:    4
- 2012-06-29:    7   2013-05-20:    5                      2002-03-28:    4
- (Other)   :  951   (Other)   :   47                      (Other)   :10489
+                               category         country          gender
+                                   :  204   usa     : 986           :10971
+ quotes                            :   16   iran    : 697   m       :   12
+ death penalty                     :    9   colombia: 502   both    :    5
+ fear for safety                   :    8   mexico  : 458   all male:    2
+ death penalty|ex 84/98|philippines:    7   syria   : 375   f       :    2
+ death penalty|usa                 :    7   nepal   : 358   all m   :    1
+ (Other)                           :10749   (Other) :7624   (Other) :    7
+     appeal_date         issue_date           action          all_dates
+           :10008             :7244              :6797             :  490
+ 2012-05-03:    9   1998-10-21:  11   stop action: 744   2002-05-10:    5
+ 2012-12-06:    9   1999-01-29:  10   update     :3459   1999-01-29:    4
+ 2012-06-22:    8   2003-02-21:  10                      2000-11-06:    4
+ 2012-07-13:    8   2005-05-25:  10                      2001-07-03:    4
+ 2012-06-29:    7   2012-06-01:  10                      2002-03-28:    4
+ (Other)   :  951   (Other)   :3705                      (Other)   :10489
 """
 
 import os
 import re
 import csv
+import sys
 import datetime
-import pymongo
+USE_DB = False
+if "mongo" in sys.argv:
+    USE_DB = True
+    import pymongo
 
 
 INPUT_FILE = "../raw_data/lotus_database.txt"
@@ -99,6 +101,9 @@ class UADoc(object):
         """
         line = self.text
         self.parse_subject()
+
+        self.parse_country()
+
         self.parse_issue_date()
 
         self.appeal_date = self.extract_date(self.APPEAL_DATE_REGEX, match_offset=0)
@@ -110,23 +115,57 @@ class UADoc(object):
         body = self.match_line(self.BODY_REGEX)
         self.body = re.sub("\|+", "\n", body)
 
-
         # just grab every known date in the whole document
         dates = self.ANY_DATE_REGEX.findall(self.text)
         dates = map(self.format_date, dates)
         self.dates = list(dates)
 
-    ISSUE_DATE_REGEX  = re.compile(r"(issue )?date: ([0-9]{1,2}) *?([a-z]+?)[, ]*?([0-9]{2,4})")
-    ISSUE_DATE_REGEX2 = re.compile(r"issued on \(([0-9]{1,2}) *?([a-z]+?) *?([0-9]{2,4})\)")
+    ISSUE_DATE_REGEX  = re.compile(r"issue date\: *?([0-9]{1,2}) *?([a-z]+?)[, ]*?([0-9]{2,4})")
+    ISSUE_DATE_REGEX2 = re.compile(r"issued ?o?n? \(?([0-9]{1,2}) *?([a-z]+?) *?([0-9]{2,4})\)?")
+    ISSUE_DATE_REGEX3 = re.compile(r"issued ([0-9]{1,2}) *?([a-z]+?) *?([0-9]{2,4})")
+    ISSUE_DATE_REGEX4 = re.compile(r"\(([0-9]{1,2}) *?([a-z]+?) *?([0-9]{2,4})\)")
+    ISSUE_DATE_REGEX5 = re.compile(r"issue date\: ([a-z]+?) *?([0-9]{1,2})[, ]*?([0-9]{2,4})")
     def parse_issue_date(self):
         """
         Issue dates come in a few different formats. We'll try them all.
         """
+        self.issue_date_version = -1
+
         self.issue_date = self.extract_date(self.ISSUE_DATE_REGEX2, line=self.subject)
-        if self.issue_date == "":
-            self.issue_date = self.extract_date(self.ISSUE_DATE_REGEX2)
-        if self.issue_date == "":
-            self.issue_date = self.extract_date(self.ISSUE_DATE_REGEX)
+        if self.issue_date != "":
+            self.issue_date_version = 0
+            return
+
+        self.issue_date = self.extract_date(self.ISSUE_DATE_REGEX2)
+
+        if self.issue_date != "":
+            self.issue_date_version = 1
+            return
+
+        self.issue_date = self.extract_date(self.ISSUE_DATE_REGEX3)
+
+        if self.issue_date != "":
+            self.issue_date_version = 2
+            return
+
+        self.issue_date = self.extract_date(self.ISSUE_DATE_REGEX)
+
+        if self.issue_date != "":
+            self.issue_date_version = 3
+            return
+
+        self.issue_date = self.extract_date(self.ISSUE_DATE_REGEX4, line=self.subject)
+
+        if self.issue_date != "":
+            self.issue_date_version = 4
+            return
+
+        match = self.ISSUE_DATE_REGEX5.search(self.text)
+        if match is not None:
+            self.issue_date = self.format_date((match.group(2), match.group(1), match.group(3)))
+
+        if self.issue_date != "":
+            self.issue_date_version = 5
 
     def extract_date(self, dt_regex, match_offset=0, line=None):
         """
@@ -142,16 +181,16 @@ class UADoc(object):
             month = dt.group(2 + match_offset)
             year = dt.group(3 + match_offset)
             return self.format_date((day, month, year))
+        return ""
 
-    COUNTRY_REGEX     = re.compile(r"\|subject: *.+? on (.+?)\|")
-    RE_SUBJECT        = re.compile(r"subject: *(.+?)\|")
+    SUBJECT_REGEX = re.compile(r"subject: *?(.+?)\|")
     def parse_subject(self):
-        self.subject = self.match_line(self.RE_SUBJECT)
+        self.subject = self.match_line(self.SUBJECT_REGEX)
         if self.subject != "":
             # get the ID
             m = re.search(r"([0-9]{1,3}/[0-9]{1,3})", self.subject)
             if m is not None:
-                self.id = m.group(1)
+                self.id = m.group(1).strip()
 
             # get the action
             if "stop action" in self.subject:
@@ -159,15 +198,23 @@ class UADoc(object):
             elif "update" in self.subject:
                 self.action = "update"
 
-        line = self.subject if self.subject != "" else self.text
+    COUNTRY_REGEX = re.compile(r"\|country: *?(.+?)\|")
+    REGION_REGEX  = re.compile(r"(.+) \((.+)\)")
+    COUNTRY_REGEX2 = re.compile(r"\|subject: *[^\|]+? on ([^\|]+)\|")
+    def parse_country(self):
+        # get the country
+        self.country = self.match_line(self.COUNTRY_REGEX)
         if self.country == "":
-            # get the country
-            self.country = self.match_line(self.COUNTRY_REGEX, line=line)
-            if "/" in self.country:
-                self.country, self.region = self.country.split("/", 1)
-            elif re.search(r"(.+) \(.+\)", self.country) is not None:
-                self.region = re.search(r"(.+) \((.+)\)", self.country).group(2)
-                self.country = re.search(r"(.+) \((.+)\)", self.country).group(1)
+            self.country = self.match_line(self.COUNTRY_REGEX2)
+
+        # see if there's a region and split that out.
+        if "/" in self.country:
+            self.country, self.region = self.country.split("/", 1)
+        elif self.REGION_REGEX.search(self.country) is not None:
+            match = self.REGION_REGEX.search(self.country)
+            self.country = match.group(1)
+            self.region = match.group(2)
+
 
 
     def cleanup_text(self, line):
@@ -185,7 +232,7 @@ class UADoc(object):
             line = self.text
         match = reg.search(line)
         if match is not None:
-            return match.group(grp)
+            return match.group(grp).strip()
         return ""
 
     @staticmethod
@@ -205,12 +252,21 @@ class UADoc(object):
     def __len__(self):
         return len(self.text)
 
+    @staticmethod
+    def is_document_break(line, previous_line):
+        if "$file:" in line:
+            return True
+        if line.startswith("from:"):
+            if "$file" in previous_line:
+                return True
+            return True
 
-if __name__ == "__main__":
+def main():
 
     # set up mongo db (running on localhost for now)
-    db = pymongo.Connection().datakind
-    db.drop_collection("data")
+    if USE_DB:
+        db = pymongo.Connection().datakind
+        db.drop_collection("data")
 
     # set up the output directory for individual files
     if not os.path.exists(OUTPUT_DIR):
@@ -226,12 +282,21 @@ if __name__ == "__main__":
     fin = open(INPUT_FILE, "r")
     file_count = 0
     doc = UADoc()
+    line = ""
+    previous_line = ""
+
     for line_number, line in enumerate(fin.readlines()):
 
+        # hold onto the previous line value. we'll need this in determining
+        # document breaks
+        if line != "":
+            previous_line = line
+
+        # grab the next line
         line = BAD_CHARACTER_REGEX.sub("", line.strip())
 
         # document breaks on "from:" or "$file:"
-        if line.startswith("from:") or "$file:" in line:
+        if doc.is_document_break(line, previous_line):
             if doc.text != "":
 
                 # all of the collection is done. Parse the document.
@@ -248,17 +313,20 @@ if __name__ == "__main__":
                 open(os.path.join(OUTPUT_DIR, str(file_count)), "wb").write(doc.text.replace("|", "\n"))
 
                 # insert the data into mongo
-                db.data.insert(doc.__dict__)
+                if USE_DB == True:
+                    db.data.insert(doc.__dict__)
 
             # on to a new document
             doc = UADoc()
             file_count += 1
 
             continue
-
         # if it's not a new document, add the line to the existing one.
         doc.addline(line)
 
-        if line_number % 100000 == 0:
+        if line_number % 10000 == 0:
             print "lines:", line_number, "documents:", file_count
     del(fout)
+
+if __name__ == "__main__":
+    main()
