@@ -7,6 +7,7 @@ db = dataset.connect(db_url)
 
 # read in csv
 fieldnames = (
+  "",
   "document",
   "id",
   "subject",
@@ -19,10 +20,13 @@ fieldnames = (
   "issue_date",
   "action",
   "all_dates",
-  "body"
+  "body",
+  "iso3_country",
+  "iso3_subject",
+  "iso3_category"
 )
 
-f = open( '../cleaned_data/lotus_database.csv', 'r' )
+f = open( '../cleaned_data/lotus_database_w_iso3.csv', 'r' )
 reader = csv.DictReader(f, fieldnames = fieldnames)
 raw_data = []
 for i, r in enumerate(reader):
@@ -33,22 +37,23 @@ clean_data = []
 for row in raw_data:
   new_row = {}
   for k in row.keys():
-    v = row[k]
-    if v == '':
-      v = None
-    if k == "id":
-      new_row['data_id'] = v
-    if k == "action":
-      new_row['action'] = str(v)
-    if k == "year":
-      if v is None:
-        new_row['year'] = None
+    if k!="":
+      v = row[k]
+      if v == 'NA':
+        v = None
+      if k == "id":
+        new_row['data_id'] = v
+      if k == "action":
+        new_row['action'] = str(v)
+      if k == "year":
+        if v is None:
+          new_row['year'] = None
+        else:
+          new_row['year'] = int(v.strip())
       else:
-        new_row['year'] = int(v.strip())
-    else:
-      new_row[k] = v
+        new_row[k] = v
 
-    new_row.pop("id", None)
+      new_row.pop("id", None)
 
   clean_data.append(new_row)
 

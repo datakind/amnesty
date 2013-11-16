@@ -78,9 +78,8 @@ def train_model(texts, **kwargs):
 if __name__ == '__main__':
   
   # # nyt example
-  texts = [r['body'] for r in db['amnesty'].all()]
+  texts = [r['body'] for r in db['amnesty'].all() if r['body']!="" and r['body'] is not None]
   
-
   # real data
   # texts = [r['content'] for r in db.query('SELECT content FROM articles')]
     

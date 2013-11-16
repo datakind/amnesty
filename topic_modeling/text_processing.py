@@ -42,7 +42,7 @@ def remove_URLs(string):
 
 def clean_text(
       text, 
-      html=False, 
+      html=True, 
       digits=False, 
       urls=False, 
       ascii=False
@@ -111,9 +111,9 @@ def tokenize_and_normalize_text(
     return None
 
   # check stopwords arg
-  if lang not in stopwords.fileids():
-    print '***ERROR: lang', lang, 'not in', stopwords.fileids(), '!'
-    return None
+  # if lang not in stopwords.fileids():
+  #   print '***ERROR: lang', lang, 'not in', stopwords.fileids(), '!'
+  #   return None
   stops = frozenset(stopwords)
 
   # toxenize words
