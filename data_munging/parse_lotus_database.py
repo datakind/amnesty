@@ -318,7 +318,10 @@ class UADoc(object):
         try:
             day, month, year = dmy_tuple
             if len(year) == 2:
-                year = "20" + year
+                if year<13: # two digit less than 13 is probably 20xx (nothing from 1913...)
+                    year = "20" + year
+                else: # otherwise is probably 19xx
+                    year = "19" + year
             if len(day) == 1:
                 day = "0" + day
             date_string = " ".join([day, month, year])
