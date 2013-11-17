@@ -26,6 +26,11 @@ path {
   stroke: #fff;
 }
 
+#EndingSoon {
+  list-style-type: none;
+  padding: 0px;
+}
+
     </style>
   </head>
   <body>
@@ -47,9 +52,8 @@ path {
 			          <option value="orthographic" selected>orthographic</option>
 			          <option value="stereographic">stereographic</option>
 			        </select></div>-->
-			        <div><select id="metricPicker">
-			          <option value="">-- pick metric --</option>
-			          <option value="counts">Total Number of Incidents</option>
+			        <div><select id="metricPicker" onchange="updateGlobe()">
+			          <option value="count">Total Number of Incidents</option>
 			          <option value="population">Population</option>
 			          <option value="countPerMillion" selected>UAs By Population</option>
 			        </select>
@@ -75,25 +79,31 @@ path {
 		  	<h3 style="text-align: center">Alerts Dash</h3>
 		  		<!-- remove style line once you've filled it with content -->
 			  	<div style="height:100px; 	border: 1px solid black;">
-				  	Key stats
+				  	<h4>Most Actions By Country</h4>
+            <ol id="TopStats"></ol>
 			  	</div>
 			  	<div style="height:100px; 	border: 1px solid black;">
 				  	News
 			  	</div>
-			  	<div style="height:100px; 	border: 1px solid black;">
-				  	Ending soon
+			  	<div style="height:250px; 	border: 1px solid black;">
+              <h4>Ending Soon:</h4>
+              <ul id="EndingSoon" class="EndingSoon"></ul>
 			  	</div>
 			  	<div style="height:100px; 	border: 1px solid black;">
 				  	Accomplishments/resolved
 			  	</div>
-			  	<div style="height:100px; 	border: 1px solid black;">
-				  	Twitter feed
+			  	<div style="height:250px; 	border: 1px solid black;">
+				  	<a class="twitter-timeline" data-dnt="true" href="https://twitter.com/amnesty" data-widget-id="401859295186149376">Tweets by @amnesty</a>
+                    <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+"://platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");</script>
+
+
 			  	</div>
 			  	<div style="height:100px; 	border: 1px solid black;">
 				  	Facebook feed
 			  	</div>
 	  	</div>
   	</div>
+    <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
     <script type="text/javascript">
 
 var feature;
@@ -125,15 +135,21 @@ var svg = d3.select("#globe").append("svg:svg")
     .on("mousedown", mousedown);
 
 
+
 var theData, countMin=0, colorScale;
-var maxes = {"count":0,"population":0,"countPerMillion":0}
+//var maxes = {"count":0,"population":0,"countPerMillion":0}
 var fields = ["count","population","countPerMillion"];
+var fieldDetails={
+	"count":{"min":null,"max":null,"hue":0,"colorScale":null},
+	"population":{"min":null,"max":null,"hue":160,"colorScale":null},
+	"countPerMillion":{"min":null,"max":null,"hue":340,"colorScale":null}
+}
 
 var theField = "countPerMillion";
 
-d3.json("world-countries.json", function(collection) {
+d3.json("http://www.jrsandbox.com/amnesty/map/world-countries.json", function(collection) {
 	theData=collection.features;
-	d3.json("baseCount.json", function(counts) {
+	d3.json("http://www.jrsandbox.com/amnesty/map/baseCount.json", function(counts) {
 	//countMax = d3.max()
 	
 	countMax=0;
@@ -145,34 +161,46 @@ d3.json("world-countries.json", function(collection) {
 			theData[i]["count"]=counts[countryKey]["count"];
 			theData[i]["population"]=populations[countryKey];
 			theData[i]["countPerMillion"]=counts[countryKey]["count"]/(populations[countryKey]/1000000.);
-			for(j in fields){
+			for(var j in fields){
 				var f=fields[j];
-				maxes[f] = (maxes[f]<theData[i][f])?theData[i][f]:maxes[f];
+				fieldDetails[f]["max"] = (fieldDetails[f]["max"]==null || fieldDetails[f]["max"]<theData[i][f])?theData[i][f]:fieldDetails[f]["max"];
+				fieldDetails[f]["min"] = (fieldDetails[f]["min"]==null || fieldDetails[f]["min"]>theData[i][f])?theData[i][f]:fieldDetails[f]["min"];				
 			}
 		}
 	}
+	for(var i in fields){
+		var f=fields[i];
+		fieldDetails[f]["colorScale"] = d3.scale.linear()
+									    .domain([fieldDetails[f]["min"], fieldDetails[f]["max"]])
+									    .range([90,20]);
+	}
 	
-	colourScale = d3.scale.linear()
-	    .domain([0, maxes[theField]])
-	    .range([90,0]);
-
-
 	  feature = svg.selectAll("path")
 	      .data(theData)
 	    .enter().append("svg:path")
 	      .attr("d", clip)
 	      //.attr("fill","hsl(100,50%,50%)");
-	      .attr("fill",function(d){
-			  if(d["count"]){return "hsl(0,60%,"+colourScale(d[theField])+"%)";}
+	      .attr("fill",getColor)/*function(d){
+			  if(d["count"]){return "hsl(0,60%,"+fieldDetails[f]["colorScale"](d[theField])+"%)";}
 			  else{return "lightgrey";}
-		  	})
-		  .on("click",populateCountryDetails);//function(d){ alert("Population:\t\t\t"+d["population"]+"\nNumber of UAs:\t\t"+d["count"]+"\nNumber per million:\t"+d["countPerMillion"])});
+		  	})*/
+		  .on("click",populateCountryDetails);
 	
 	  feature.append("svg:title")
 	      .text(function(d) { return d.properties.name; });
 	
 	});
 });
+
+
+function getColor(d){
+	if(d[theField]){
+		return "hsl("+fieldDetails[theField]["hue"]+",60%,"+fieldDetails[theField]["colorScale"](d[theField])+"%)";
+	}
+	else{
+		return "lightgrey";
+	}
+}
 
 function populateCountryDetails(d){
 	$("#countryName").html(d.properties.name);
@@ -193,10 +221,10 @@ d3.select(window)
     .on("mouseup", mouseup);
 
 
-d3.select("select").on("change", function() {
+/*d3.select("select").on("change", function() {
   projection.mode(this.value).scale(scale[this.value]);
   refresh(750);
-});
+});*/
 
 var m0,
     o0;
@@ -232,8 +260,48 @@ function clip(d) {
   return path(circle.clip(d));
 }
 
+
+function updateGlobe(){
+	var newField=$("#metricPicker option:selected").val();
+	if(newField==theField){return false;}
+	theField=newField;
+	console.log(fieldDetails[theField]);
+	svg.selectAll("path")
+					.transition()
+					.duration(1000)
+						.attr("fill",getColor);
+}
+
+function db_query(query, callback){
+    $.ajax({
+      url:"http://54.242.238.152:5000",
+      cache: false,
+      type: "POST",
+      data: {"q":query, 'callback': true},
+      dataType: "jsonp",
+      success: callback
+    });
+}
+
+$(document).ready(function() {
+
+  // ENDING SOON
+  db_query("select appeal_date, subject from amnesty order by appeal_date desc limit 5", function(data) { 
+    for(var i=0; i<data.length; i++) {
+      $("#EndingSoon").append('<li class="EndingSoon"><b>' + data[i].appeal_date + "</b> - " + data[i].subject + '</li>');
+    }});
+
+  // TOP STATS
+  db_query("select country, count(*) as actions from amnesty group by country order by actions desc limit 3", function(data) { 
+    for(var i=0; i<data.length; i++) {
+      $("#TopStats").append('<li class="TopStats"><b>' + data[i].country + '</b> - ' + data[i].actions + '</li>');
+  }});  
+
+
+});
+
     </script>
-    <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
+    
     <script src="lib/bootstrap.min.js"></script>
   </body>
 </html>
