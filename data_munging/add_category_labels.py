@@ -1,5 +1,5 @@
 import csv
-import pandas as pd
+# import pandas as pd
 import dataset
 import os, re
 from cat_mapping import cat_mapping
@@ -199,9 +199,9 @@ if __name__ == '__main__':
   table.insert_many(updated_data)
 
   # write csv
-  print "writing data to csv"
-  df = pd.DataFrame(updated_data)
-  df.to_csv('../cleaned_data/lotus_database_w_iso3_and_cats.csv')
+  # print "writing data to csv"
+  # df = pd.DataFrame(updated_data)
+  # df.to_csv('../cleaned_data/lotus_database_w_iso3_and_cats.csv')
 
 
 
