@@ -26,6 +26,11 @@ path {
   stroke: #fff;
 }
 
+#EndingSoon {
+  list-style-type: none;
+  padding: 0px;
+}
+
     </style>
   </head>
   <body>
@@ -75,14 +80,15 @@ path {
 		  	<h3 style="text-align: center">Alerts Dash</h3>
 		  		<!-- remove style line once you've filled it with content -->
 			  	<div style="height:100px; 	border: 1px solid black;">
-				  	Key stats
+				  	<h4>Most Actions By Country</h4>
+            <ol id="TopStats"></ol>
 			  	</div>
 			  	<div style="height:100px; 	border: 1px solid black;">
 				  	News
 			  	</div>
 			  	<div style="height:250px; 	border: 1px solid black;">
-              Ending Soon:
-              <ul id="EndingSoon"></ul>
+              <h4>Ending Soon:</h4>
+              <ul id="EndingSoon" class="EndingSoon"></ul>
 			  	</div>
 			  	<div style="height:100px; 	border: 1px solid black;">
 				  	Accomplishments/resolved
@@ -98,6 +104,7 @@ path {
 			  	</div>
 	  	</div>
   	</div>
+    <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
     <script type="text/javascript">
 
 var feature;
@@ -236,11 +243,6 @@ function clip(d) {
   return path(circle.clip(d));
 }
 
-db_query("select subject from amnesty limit 3", function(data) { 
-        for(var i=0; i<data.length; i++) {
-          $("#EndingSoon").append('<li class="EndingSoon">' + data[i].subject + '</li>');
-        }})
-
 function db_query(query, callback){
     $.ajax({
       url:"http://54.242.238.152:5000",
@@ -252,10 +254,25 @@ function db_query(query, callback){
     });
 }
 
-top_ua()
+$(document).ready(function() {
+
+  // ENDING SOON
+  db_query("select appeal_date, subject from amnesty order by appeal_date desc limit 5", function(data) { 
+    for(var i=0; i<data.length; i++) {
+      $("#EndingSoon").append('<li class="EndingSoon"><b>' + data[i].appeal_date + "</b> - " + data[i].subject + '</li>');
+    }});
+
+  // TOP STATS
+  db_query("select country, count(*) as actions from amnesty group by country order by actions desc limit 3", function(data) { 
+    for(var i=0; i<data.length; i++) {
+      $("#TopStats").append('<li class="TopStats"><b>' + data[i].country + '</b> - ' + data[i].actions + '</li>');
+  }});  
+
+
+});
 
     </script>
-    <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
+    
     <script src="lib/bootstrap.min.js"></script>
   </body>
 </html>
