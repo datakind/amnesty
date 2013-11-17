@@ -260,10 +260,8 @@ class UADoc(object):
                 self.action = "initial"
 
             if self.action == "s":
-                print self.action
                 self.action = "second"
             elif self.action == "f":
-                print self.action
                 self.action = "final"
 
             if m_action is None:
