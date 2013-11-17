@@ -52,6 +52,7 @@ OUTPUT_FILE = "../cleaned_data/lotus_database.csv"
 OUTPUT_DIR = "../cleaned_data/ua_files"
 
 BAD_CHARACTER_REGEX = re.compile(r'[\r\xbb\xbf\xef\xef\xbf\xbd]')
+DATE_TEMPLATE = 'issued on'
 
 
 class UADoc(object):
@@ -406,7 +407,15 @@ def main():
 #            self.subject = "remove"
 
 
-
+                if doc.issue_date.strip() == '':
+                    if DATE_TEMPLATE in doc.body and "note:" in doc.body:
+                        pos = doc.body.find(DATE_TEMPLATE)
+                        new_date = doc.body[pos+len(DATE_TEMPLATE):].split('.')[0].split(',')[0].split(':')[0]
+                        print(new_date)
+                        doc.issue_date = new_date
+                    else:
+                        if len(doc.dates) > 0:
+                            doc.issue_date = sorted(doc.dates, reverse=True)[0]
 
                 # write output to csv.
                 fout.writerow([
