@@ -1,0 +1,38 @@
+
+<%= form_for @amnesty do |f| %>
+
+  <%= f.label :category %>      
+ 	<%= f.text_field :category %><br />
+
+ 	<%= f.label :issue_date, "Issue Date" %>
+ 	<%= f.text_field :issue_date, class: 'issue_datepicker' %><br />
+
+ 	<%= f.label :gender %>
+  <%= f.select :gender, %w[Male Female] %><br />
+  
+  <%= f.label :all_dates %>
+  <%= f.text_field :all_dates %><br />
+ 
+  <%= f.label :year %>
+  <%= f.text_field :year %><br />
+  
+  <%= f.label :year_case_count %>
+  <%= f.text_field :year_case_count %><br />
+  
+  <%= f.label :iso3 %>
+  <%= f.text_field :iso3 %><br />
+  
+  <%= f.label :country %>
+  <%= f.country_select :country, ["United States"] %><br />
+  
+  <%= f.label :action %>
+  <%= f.text_field :action %><br />
+  
+  <%= f.label :document %>
+  <%= f.text_field :document %><br />
+  
+  <%= f.label :subject %>
+  <%= f.text_field :subject %><br />
+
+  <%= f.submit 'Save' %>
+<% end %>
