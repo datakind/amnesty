@@ -20,7 +20,7 @@ class AmnestiesController < ActionController::Base
 	def update
 		@amnesty = Amnesty.find(params[:id])
 	  if @amnesty.update_attributes(params[:amnesty])
-			flash[:notice] = 'User info was updated!'
+			flash[:notice] = 'Info was updated.'
 		else
 			render :edit
 		end

@@ -1,0 +1,19 @@
+svg {
+  width: 500px;
+  height: 500px;
+  pointer-events: all;
+}
+
+circle {
+  fill: #dbe4f0;
+}
+
+path {
+  /*fill: #aff;*/
+  stroke: #fff;
+}
+
+#EndingSoon {
+  list-style-type: none;
+  padding: 0px;
+}

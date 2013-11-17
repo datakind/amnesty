@@ -1,14 +1,14 @@
 = form_for @amnesty do |f|
-	= f.label :category
-	= f.text_field :category
-	%br
-	= f.label :issue_date
-	= f.text_field :issue_date
-	%br
-	= f.label :body
-	= f.text_field :body
-	%br
-	= f.label :gender
-	= f.text_field :gender
-	%br
-	= f.submit "Submit"
+		= f.label :category
+		= f.text_field :category
+		%br
+		= f.label :issue_date
+		= f.text_field :issue_date
+		%br
+		= f.label :body
+		= f.password_field :body
+		%br
+		= f.label :gender
+		= f.password_field :gender
+		%br
+		= f.submit "Submit"

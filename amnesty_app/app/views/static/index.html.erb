@@ -1,0 +1,72 @@
+<div class="container">
+	  	<div class="row">
+		  	<h1>Amnesty!</h1>
+	  	</div>
+	  	<div class="col-md-8" id="DataDash">
+		  	<div class="row">
+		  	<%= image_tag 'take-action.png' %>
+		  	</div>
+		  	<div class="row">
+	  		  	<div class="col-md-4" id="DataSidebar">
+			        Amnesty UA Events: drag to rotate
+			        <!--<div><select>
+			          <option value="equalarea">equalarea</option>
+			          <option value="equidistant">equidistant</option>
+			          <option value="gnomonic">gnomonic</option>
+			          <option value="orthographic" selected>orthographic</option>
+			          <option value="stereographic">stereographic</option>
+			        </select></div>-->
+			        <div><select id="metricPicker" onchange="updateGlobe()">
+			          <option value="count">Total Number of Incidents</option>
+			          <option value="population">Population</option>
+			          <option value="countPerMillion" selected>UAs By Population</option>
+			        </select>
+			        </div>
+			        <div id="CountryDetailsFromGlobe">
+						<h4 id="countryName">Click to see Details</h4>
+						<table>
+						<tr><td>Pop: </td><td id="countryPopulation"></td></tr>
+						<tr><td>Num UAs: </td><td id="numTotalUAs"></td></tr>
+						<tr><td>UAs/million: </td><td id="UAsPerMillion"></td></tr>
+						</table>
+			        </div>
+	  		  	</div>
+				<div class="col-md-4" id="GlobeHolder">
+					<div id="globe"></div>
+			  	</div>
+		  	</div>
+		  	<div class="row" style="height:100px; 	border: 1px solid black;">
+			  	FIND ALERTS
+		  	</div>
+	  	</div>
+	  	<div class="col-md-4" id="DataSidebar">
+		  	<h3 style="text-align: center">Alerts Dash</h3>
+		  		<!-- remove style line once you've filled it with content -->
+          <div>
+            <h4>2012 Urgent Action Numbers</h4>
+            Loss of Life Total and By Quarter<br><br>
+            <%= image_tag 'cross-09.png' %>
+          </div>
+			  	<div>
+				  	<h4>Most Actions By Country</h4>
+            <ol id="TopStats"></ol>
+			  	</div>
+          <div>
+            <h4>Accomplishments: Resolved UAs by Country</h4>
+          Accounting for Population<br>
+          <%= image_tag 'cross-12.png' %>
+          </div>
+			  	<div>
+              <h4>Ending Soon:</h4>
+              <ul id="EndingSoon" class="EndingSoon"></ul>
+			  	</div>
+
+			  	<div>
+				  	<a class="twitter-timeline" data-dnt="true" href="https://twitter.com/amnesty" data-widget-id="401859295186149376">Tweets by @amnesty</a>
+                    <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+"://platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");</script>
+          </div>
+          <div>
+          <%= image_tag 'social.png' %>
+          </div>
+	  	</div>
+  	</div>

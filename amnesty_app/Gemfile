@@ -16,6 +16,7 @@ group :development do
   gem 'annotate'
   gem 'pry-debugger'
   gem 'pry-rails'
+  gem 'thin'
 end
 
 
