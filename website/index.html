@@ -9,6 +9,11 @@
     <!--<link type="text/css" rel="stylesheet" href="http://mbostock.github.io/d3/talk/20111018/style.css"/>-->
     <link type="text/css" rel="stylesheet" href="http://mbostock.github.io/d3/talk/20111018/colorbrewer/colorbrewer.css"/>
     <link type="text/css" rel="stylesheet" href="css/bootstrap.css">
+<!--     <link href="css/jquery.dynamic-highchart.css" rel="stylesheet" type="text/css" > -->
+<!--     // <script src="js/thirdparty/jquery.1.10.1.min.js"></script>
+    // <script src="js/thirdparty/miso.ds.deps.ie.0.4.1.js"></script>
+    // <script src="js/thirdparty/highcharts.js"></script>
+    // <script src="js/jquery.dynamic-highchart.js"></script> -->
     <style type="text/css">
 
 svg {
@@ -71,10 +76,30 @@ path {
 					<div id="globe"></div>
 			  	</div>
 		  	</div>
-		  	<div class="row" style="height:100px; 	border: 1px solid black;">
-			  	FIND ALERTS
+		  	<div class="row">
+          <div align="left">
+            <select id="countries" name="mydropdown">
+              <option value="USA">United States</option>
+              <option value="IRN">Iran</option>
+              <option value="COL">Colombia</option>
+              <option value="MEX">Mexico</option>
+              <option value="SYR">Syria</option>
+              <option value="CHN">China</option>
+              <option value="SAU">Saudi Arabia</option>
+              <option value="TUR">Turkey</option>
+              <option value="RUS">Russia</option>
+              <option value="ISR">Israel</option>
+              <option value="EGY">Egypt</option>
+              <option value="IRQ">Iraq</option>
+              <option value="IND">India</option>
+            </select>
+            <ul id="recent-countries">
+            </ul>
+          </div>
 		  	</div>
 	  	</div>
+      <div id="barchart">
+      </div>
 	  	<div class="col-md-4" id="DataSidebar">
 		  	<h3 style="text-align: center">Alerts Dash</h3>
 		  		<!-- remove style line once you've filled it with content -->
@@ -286,6 +311,19 @@ function db_query(query, callback){
     });
 }
 
+function recent_alerts(){
+    $("#recent-countries").empty()
+    var iso = $("#countries").val();
+    console.log(iso);
+
+    db_query("select iso3, body, subject from amnesty where iso3='" + iso + "' order by issue_date desc limit 5", 
+      function(data){
+      for (var i=0; i< data.length; i++) {
+        $("#recent-countries").append('<li class="TopStats"><b>' + iso + ":</b><br/><u>" + data[i].subject + '</u><br/>' + data[i].body.substring(0,100) + "... </li>")
+      }
+    });
+};
+
 $(document).ready(function() {
 
   // ENDING SOON
@@ -298,12 +336,20 @@ $(document).ready(function() {
   db_query("select country, count(*) as actions from amnesty group by country order by actions desc limit 3", function(data) { 
     for(var i=0; i<data.length; i++) {
       $("#TopStats").append('<li class="TopStats"><b>' + data[i].country + '</b> - ' + data[i].actions + '</li>');
-  }});  
+  }});
 
-
+  // TOP STATS
+  db_query("select country, count(*) as actions from amnesty group by country order by actions desc limit 3", function(data) { 
+    for(var i=0; i<data.length; i++) {
+      $("#TopStats").append('<li class="TopStats"><b>' + data[i].country + '</b> - ' + data[i].actions + '</li>');
+  }});    
+  recent_alerts()
+  $("#countries").change(
+    recent_alerts
+  );
 });
 
-    </script>
+  </script>
     
     <script src="lib/bootstrap.min.js"></script>
   </body>

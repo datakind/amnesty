@@ -1,0 +1,35 @@
+#hover-templ{
+	position:absolute;
+	font-family: arial, sans-serif;
+	border: 1px solid #ccc;
+	-webkit-box-shadow: 0 0 12px #ccc;
+	-moz-box-shadow: 0 0 12px #ccc;
+	box-shadow: 0 0 12px #ccc;
+	width:200px;
+	display:none;
+	padding:8px;
+	z-index: 999999;
+	color: #303030;
+	background-color: white;
+	font-size:14px;
+	-webkit-box-sizing: border-box;
+	   -moz-box-sizing: border-box;
+	        box-sizing: border-box;
+}
+.chart-loading{
+	text-transform:uppercase;
+	font-family:Arial, sans-serif;
+	text-align:center;
+	font-weight:bold;
+	letter-spacing:1px;
+	margin-top:10%;
+}
+.chart-loading img{
+	position:relative;
+	top:2px;
+}
+.chart-hover-title{
+	font-weight: bold;
+	margin-bottom:5px;
+	line-height: 15px;
+	}
