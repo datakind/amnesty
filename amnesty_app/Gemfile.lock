@@ -56,6 +56,13 @@ GEM
     erubis (2.7.0)
     execjs (2.0.2)
     fattr (2.2.1)
+    haml (4.0.4)
+      tilt
+    haml-rails (0.4)
+      actionpack (>= 3.1, < 4.1)
+      activesupport (>= 3.1, < 4.1)
+      haml (>= 3.1, < 4.1)
+      railties (>= 3.1, < 4.1)
     highline (1.6.20)
     hike (1.2.3)
     i18n (0.6.1)
@@ -140,6 +147,7 @@ DEPENDENCIES
   better_errors
   binding_of_caller
   coffee-rails (~> 3.2.1)
+  haml-rails
   jquery-rails
   pg
   progress_bar

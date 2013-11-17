@@ -21,4 +21,6 @@
 
 class Amnesty < ActiveRecord::Base
   set_table_name 'amnesty'
+
+  attr_accessible :category, :body, :issue_date, :gender
 end
