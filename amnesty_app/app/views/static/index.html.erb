@@ -1,0 +1,269 @@
+<div class="container">
+	  	<div class="row">
+		  	<h1>Amnesty!</h1>
+	  	</div>
+	  	<div class="col-md-8" id="DataDash">
+		  	<div class="row">
+		  	<%= image_tag 'take-action.png' %>
+		  	</div>
+		  	<div class="row">
+	  		  	<div class="col-md-4" id="DataSidebar">
+			        Amnesty UA Events: drag to rotate
+			        <!--<div><select>
+			          <option value="equalarea">equalarea</option>
+			          <option value="equidistant">equidistant</option>
+			          <option value="gnomonic">gnomonic</option>
+			          <option value="orthographic" selected>orthographic</option>
+			          <option value="stereographic">stereographic</option>
+			        </select></div>-->
+			        <div><select id="metricPicker" onchange="updateGlobe()">
+			          <option value="count">Total Number of Incidents</option>
+			          <option value="population">Population</option>
+			          <option value="countPerMillion" selected>UAs By Population</option>
+			        </select>
+			        </div>
+			        <div id="CountryDetailsFromGlobe">
+						<h4 id="countryName">Click to see Details</h4>
+						<table>
+						<tr><td>Pop: </td><td id="countryPopulation"></td></tr>
+						<tr><td>Num UAs: </td><td id="numTotalUAs"></td></tr>
+						<tr><td>UAs/million: </td><td id="UAsPerMillion"></td></tr>
+						</table>
+			        </div>
+	  		  	</div>
+				<div class="col-md-4" id="GlobeHolder">
+					<div id="globe"></div>
+			  	</div>
+		  	</div>
+		  	<div class="row" style="height:100px; 	border: 1px solid black;">
+			  	FIND ALERTS
+		  	</div>
+	  	</div>
+	  	<div class="col-md-4" id="DataSidebar">
+		  	<h3 style="text-align: center">Alerts Dash</h3>
+		  		<!-- remove style line once you've filled it with content -->
+          <div>
+            <h4>2012 Urgent Action Numbers</h4>
+            Loss of Life Total and By Quarter<br><br>
+            <%= image_tag 'cross-09.png' %>
+          </div>
+			  	<div>
+				  	<h4>Most Actions By Country</h4>
+            <ol id="TopStats"></ol>
+			  	</div>
+          <div>
+            <h4>Accomplishments: Resolved UAs by Country</h4>
+          Accounting for Population<br>
+          <%= image_tag 'cross-12.png' %>
+          </div>
+			  	<div>
+              <h4>Ending Soon:</h4>
+              <ul id="EndingSoon" class="EndingSoon"></ul>
+			  	</div>
+
+			  	<div>
+				  	<a class="twitter-timeline" data-dnt="true" href="https://twitter.com/amnesty" data-widget-id="401859295186149376">Tweets by @amnesty</a>
+                    <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+"://platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");</script>
+          </div>
+          <div>
+          <%= image_tag 'social.png' %>
+          </div>
+	  	</div>
+	  	<script type="text/javascript">
+
+var feature;
+
+var projection = d3.geo.azimuthal()
+    .scale(250)
+    .origin([-71.03,42.37])
+    .mode("orthographic")
+    .translate([250, 250]);
+
+var circle = d3.geo.greatCircle()
+    .origin(projection.origin());
+
+// TODO fix d3.geo.azimuthal to be consistent with scale
+var scale = {
+  orthographic: 250,
+  stereographic: 250,
+  gnomonic: 250,
+  equidistant: 250 / Math.PI * 2,
+  equalarea: 250 / Math.SQRT2
+};
+
+var path = d3.geo.path()
+    .projection(projection);
+
+var svg = d3.select("#globe").append("svg:svg")
+    .attr("width", 500)
+    .attr("height", 500)
+    .on("mousedown", mousedown);
+
+
+
+var theData, countMin=0, colorScale;
+//var maxes = {"count":0,"population":0,"countPerMillion":0}
+var fields = ["count","population","countPerMillion"];
+var fieldDetails={
+	"count":{"min":null,"max":null,"hue":0,"colorScale":null},
+	"population":{"min":null,"max":null,"hue":160,"colorScale":null},
+	"countPerMillion":{"min":null,"max":null,"hue":340,"colorScale":null}
+}
+
+var theField = "countPerMillion";
+
+d3.json("world-countries.json", function(collection) {
+	theData=collection.features;
+	d3.json("baseCount.json", function(counts) {
+	//countMax = d3.max()
+	
+	countMax=0;
+	for(var i in theData){
+		var countryKey = theData[i]["id"];
+		//console.log(theData[i]["id"]);
+
+		if(counts[countryKey]){
+			theData[i]["count"]=counts[countryKey]["count"];
+			theData[i]["population"]=populations[countryKey];
+			theData[i]["countPerMillion"]=counts[countryKey]["count"]/(populations[countryKey]/1000000.);
+			for(var j in fields){
+				var f=fields[j];
+				fieldDetails[f]["max"] = (fieldDetails[f]["max"]==null || fieldDetails[f]["max"]<theData[i][f])?theData[i][f]:fieldDetails[f]["max"];
+				fieldDetails[f]["min"] = (fieldDetails[f]["min"]==null || fieldDetails[f]["min"]>theData[i][f])?theData[i][f]:fieldDetails[f]["min"];				
+			}
+		}
+	}
+	for(var i in fields){
+		var f=fields[i];
+		fieldDetails[f]["colorScale"] = d3.scale.linear()
+									    .domain([fieldDetails[f]["min"], fieldDetails[f]["max"]])
+									    .range([90,20]);
+	}
+	
+	  feature = svg.selectAll("path")
+	      .data(theData)
+	    .enter().append("svg:path")
+	      .attr("d", clip)
+	      //.attr("fill","hsl(100,50%,50%)");
+	      .attr("fill",getColor)/*function(d){
+			  if(d["count"]){return "hsl(0,60%,"+fieldDetails[f]["colorScale"](d[theField])+"%)";}
+			  else{return "lightgrey";}
+		  	})*/
+		  .on("click",populateCountryDetails);
+	
+	  feature.append("svg:title")
+	      .text(function(d) { return d.properties.name; });
+	
+	});
+});
+
+
+function getColor(d){
+	if(d[theField]){
+		return "hsl("+fieldDetails[theField]["hue"]+",60%,"+fieldDetails[theField]["colorScale"](d[theField])+"%)";
+	}
+	else{
+		return "lightgrey";
+	}
+}
+
+function populateCountryDetails(d){
+	$("#countryName").html(d.properties.name);
+	if(d.population){
+		$("#countryPopulation").html(d.population);
+		$("#numTotalUAs").html(d.count);
+		$("#UAsPerMillion").html(parseFloat(d.countPerMillion.toPrecision(4)));
+	}
+	else{
+		$("#countryPopulation").empty();
+		$("#numTotalUAs").empty();
+		$("#UAsPerMillion").empty();		
+	}
+}
+
+d3.select(window)
+    .on("mousemove", mousemove)
+    .on("mouseup", mouseup);
+
+
+/*d3.select("select").on("change", function() {
+  projection.mode(this.value).scale(scale[this.value]);
+  refresh(750);
+});*/
+
+var m0,
+    o0;
+
+function mousedown() {
+  m0 = [d3.event.pageX, d3.event.pageY];
+  o0 = projection.origin();
+  d3.event.preventDefault();
+}
+
+function mousemove() {
+  if (m0) {
+    var m1 = [d3.event.pageX, d3.event.pageY],
+        o1 = [o0[0] + (m0[0] - m1[0]) / 8, o0[1] + (m1[1] - m0[1]) / 8];
+    projection.origin(o1);
+    circle.origin(o1)
+    refresh();
+  }
+}
+
+function mouseup() {
+  if (m0) {
+    mousemove();
+    m0 = null;
+  }
+}
+
+function refresh(duration) {
+  (duration ? feature.transition().duration(duration) : feature).attr("d", clip);
+}
+
+function clip(d) {
+  return path(circle.clip(d));
+}
+
+
+function updateGlobe(){
+	var newField=$("#metricPicker option:selected").val();
+	if(newField==theField){return false;}
+	theField=newField;
+	console.log(fieldDetails[theField]);
+	svg.selectAll("path")
+					.transition()
+					.duration(1000)
+						.attr("fill",getColor);
+}
+
+function db_query(query, callback){
+    $.ajax({
+      url:"http://54.242.238.152:5000",
+      cache: false,
+      type: "POST",
+      data: {"q":query, 'callback': true},
+      dataType: "jsonp",
+      success: callback
+    });
+}
+
+$(document).ready(function() {
+
+  // ENDING SOON
+  db_query("select appeal_date, subject from amnesty order by appeal_date desc limit 5", function(data) { 
+    for(var i=0; i<data.length; i++) {
+      $("#EndingSoon").append('<li class="EndingSoon"><b>' + data[i].appeal_date + "</b> - " + data[i].subject + '</li>');
+    }});
+
+  // TOP STATS
+  db_query("select country, count(*) as actions from amnesty group by country order by actions desc limit 3", function(data) { 
+    for(var i=0; i<data.length; i++) {
+      $("#TopStats").append('<li class="TopStats"><b>' + data[i].country + '</b> - ' + data[i].actions + '</li>');
+  }});  
+
+
+});
+
+    </script>
+  	</div>

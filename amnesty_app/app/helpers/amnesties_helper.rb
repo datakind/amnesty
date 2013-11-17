@@ -1,0 +1,2 @@
+module AmnestiesHelper
+end

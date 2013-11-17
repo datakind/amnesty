@@ -1,0 +1,23 @@
+development:
+  adapter: postgresql
+  encoding: unicode
+  database: amnesty_app_development
+  pool: 5
+  username: ericiacutone
+  password:
+
+test:
+  adapter: postgresql
+  encoding: unicode
+  database: nche-helpline_test
+  pool: 5
+  username: ericiacutone
+  password:
+
+production:
+  adapter: postgresql
+  encoding: unicode
+  database: che-helpline_production
+  pool: 5
+  username: ericiacutone
+  password:

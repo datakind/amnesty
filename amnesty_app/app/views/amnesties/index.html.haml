@@ -1,0 +1,17 @@
+%h1 Listing amnesties
+
+%table
+  %tr
+    %th
+    %th
+    %th
+
+  - @amnesties.each do |amnesty|
+    %tr
+      %td= link_to 'Show', amnesty
+      %td= link_to 'Edit', edit_amnesty_path(amnesty)
+      %td= link_to 'Destroy', amnesty, :method => :delete, :data => { :confirm => 'Are you sure?' }
+
+%br
+
+= link_to 'New Amnesty', new_amnesty_path
