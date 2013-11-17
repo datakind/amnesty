@@ -150,9 +150,9 @@ var fieldDetails={
 
 var theField = "countPerMillion";
 
-d3.json("http://www.jrsandbox.com/amnesty/map/world-countries.json", function(collection) {
+d3.json("world-countries.json", function(collection) {
 	theData=collection.features;
-	d3.json("http://www.jrsandbox.com/amnesty/map/baseCount.json", function(counts) {
+	d3.json("baseCount.json", function(counts) {
 	//countMax = d3.max()
 	
 	countMax=0;
