@@ -326,6 +326,29 @@ def main():
 
                 # all of the collection is done. Parse the document.
                 doc.finalize()
+
+                ## kill if wrn
+                if "wrn" in doc.subject:
+                    doc = UADoc()
+                    continue
+
+                if "ma " in doc.subject or "medical action" in doc.subject or "#ma " in doc.subject:
+                    doc.id = "ma-"+doc.id
+
+                if "nsa " in doc.subject or "refugee action" in doc.subject or "ns " in doc.subject:
+                    doc.id = "nsa-"+doc.id
+
+                if "ex " in doc.subject or "ex11" in doc.subject:
+                    doc.id = "ex-"+doc.id
+
+#                WRN_REGEX = re.compile(r"wrn")
+#        m_wrn = WRN_REGEX.search(self.subject)
+
+#        if m_wrn is not None:
+#            #removing wrn (see anu)
+#            self.subject = "remove"
+
+
                 if doc.issue_date.strip() == '':
                     if DATE_TEMPLATE in doc.body and "note:" in doc.body:
                         pos = doc.body.find(DATE_TEMPLATE)
