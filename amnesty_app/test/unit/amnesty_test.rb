@@ -19,7 +19,10 @@
 #  subject         :text
 #
 
-class Amnesty < ActiveRecord::Base
-	set_table_name 'amnesty'
-  # attr_accessible :title, :body
+require 'test_helper'
+
+class AmnestyTest < ActiveSupport::TestCase
+  # test "the truth" do
+  #   assert true
+  # end
 end
