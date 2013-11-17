@@ -25,3 +25,37 @@ pip install -r requirements.txt
 cd data_munging
 python parse_lotus_database.py
 ```
+
+## Categories:
+Lookup table:
+```
+event_types = {
+  'event_1' : "Threat",
+  'event_2' : "Action",
+  'event_3' : "Country",
+  'event_4' : "Person/Group",
+  'event_5' : "Issue",
+  'event_6' : "Human Rights Protest Actions"
+}
+
+# Classification Types, Only apply to events 1 and 2
+class_types = {
+  'class_1' : "Death",
+  'class_2' : "Incarceration with Impending Death",
+  'class_3' : "Violence",
+  'class_4' : "Incarceration",
+  'class_5' : "Ill-treatment",
+  'class_6' : "Forced Movement",
+  'class_7' : "Threat of Death",
+  'class_8' : "Threat of Violence ",
+  'class_9' : "Threat of Incarceration",
+  'class_10' : "Risk",
+  'class_11' : "legal issues",
+  'class_12' : "Health Concern" ,
+  'class_13' : "Abduction",
+  'class_14' : "Corporate Abuse",
+  'class_15' : "Discrimination",
+  'class_16' : "Torture",
+  'class_17' : "Threat of Torture"
+}
+```
