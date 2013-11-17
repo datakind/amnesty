@@ -52,9 +52,8 @@ path {
 			          <option value="orthographic" selected>orthographic</option>
 			          <option value="stereographic">stereographic</option>
 			        </select></div>-->
-			        <div><select id="metricPicker">
-			          <option value="">-- pick metric --</option>
-			          <option value="counts">Total Number of Incidents</option>
+			        <div><select id="metricPicker" onchange="updateGlobe()">
+			          <option value="count">Total Number of Incidents</option>
 			          <option value="population">Population</option>
 			          <option value="countPerMillion" selected>UAs By Population</option>
 			        </select>
@@ -136,15 +135,21 @@ var svg = d3.select("#globe").append("svg:svg")
     .on("mousedown", mousedown);
 
 
+
 var theData, countMin=0, colorScale;
-var maxes = {"count":0,"population":0,"countPerMillion":0}
+//var maxes = {"count":0,"population":0,"countPerMillion":0}
 var fields = ["count","population","countPerMillion"];
+var fieldDetails={
+	"count":{"min":null,"max":null,"hue":0,"colorScale":null},
+	"population":{"min":null,"max":null,"hue":160,"colorScale":null},
+	"countPerMillion":{"min":null,"max":null,"hue":340,"colorScale":null}
+}
 
 var theField = "countPerMillion";
 
-d3.json("world-countries.json", function(collection) {
+d3.json("http://www.jrsandbox.com/amnesty/map/world-countries.json", function(collection) {
 	theData=collection.features;
-	d3.json("baseCount.json", function(counts) {
+	d3.json("http://www.jrsandbox.com/amnesty/map/baseCount.json", function(counts) {
 	//countMax = d3.max()
 	
 	countMax=0;
@@ -156,34 +161,46 @@ d3.json("world-countries.json", function(collection) {
 			theData[i]["count"]=counts[countryKey]["count"];
 			theData[i]["population"]=populations[countryKey];
 			theData[i]["countPerMillion"]=counts[countryKey]["count"]/(populations[countryKey]/1000000.);
-			for(j in fields){
+			for(var j in fields){
 				var f=fields[j];
-				maxes[f] = (maxes[f]<theData[i][f])?theData[i][f]:maxes[f];
+				fieldDetails[f]["max"] = (fieldDetails[f]["max"]==null || fieldDetails[f]["max"]<theData[i][f])?theData[i][f]:fieldDetails[f]["max"];
+				fieldDetails[f]["min"] = (fieldDetails[f]["min"]==null || fieldDetails[f]["min"]>theData[i][f])?theData[i][f]:fieldDetails[f]["min"];				
 			}
 		}
 	}
+	for(var i in fields){
+		var f=fields[i];
+		fieldDetails[f]["colorScale"] = d3.scale.linear()
+									    .domain([fieldDetails[f]["min"], fieldDetails[f]["max"]])
+									    .range([90,20]);
+	}
 	
-	colourScale = d3.scale.linear()
-	    .domain([0, maxes[theField]])
-	    .range([90,0]);
-
-
 	  feature = svg.selectAll("path")
 	      .data(theData)
 	    .enter().append("svg:path")
 	      .attr("d", clip)
 	      //.attr("fill","hsl(100,50%,50%)");
-	      .attr("fill",function(d){
-			  if(d["count"]){return "hsl(0,60%,"+colourScale(d[theField])+"%)";}
+	      .attr("fill",getColor)/*function(d){
+			  if(d["count"]){return "hsl(0,60%,"+fieldDetails[f]["colorScale"](d[theField])+"%)";}
 			  else{return "lightgrey";}
-		  	})
-		  .on("click",populateCountryDetails);//function(d){ alert("Population:\t\t\t"+d["population"]+"\nNumber of UAs:\t\t"+d["count"]+"\nNumber per million:\t"+d["countPerMillion"])});
+		  	})*/
+		  .on("click",populateCountryDetails);
 	
 	  feature.append("svg:title")
 	      .text(function(d) { return d.properties.name; });
 	
 	});
 });
+
+
+function getColor(d){
+	if(d[theField]){
+		return "hsl("+fieldDetails[theField]["hue"]+",60%,"+fieldDetails[theField]["colorScale"](d[theField])+"%)";
+	}
+	else{
+		return "lightgrey";
+	}
+}
 
 function populateCountryDetails(d){
 	$("#countryName").html(d.properties.name);
@@ -204,10 +221,10 @@ d3.select(window)
     .on("mouseup", mouseup);
 
 
-d3.select("select").on("change", function() {
+/*d3.select("select").on("change", function() {
   projection.mode(this.value).scale(scale[this.value]);
   refresh(750);
-});
+});*/
 
 var m0,
     o0;
@@ -241,6 +258,18 @@ function refresh(duration) {
 
 function clip(d) {
   return path(circle.clip(d));
+}
+
+
+function updateGlobe(){
+	var newField=$("#metricPicker option:selected").val();
+	if(newField==theField){return false;}
+	theField=newField;
+	console.log(fieldDetails[theField]);
+	svg.selectAll("path")
+					.transition()
+					.duration(1000)
+						.attr("fill",getColor);
 }
 
 function db_query(query, callback){
