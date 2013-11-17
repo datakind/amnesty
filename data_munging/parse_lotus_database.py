@@ -110,8 +110,8 @@ class UADoc(object):
         """
         line = self.text
         self.parse_subject()
-        
-        
+
+
         self.parse_country()
 
         self.parse_issue_date()
@@ -135,16 +135,16 @@ class UADoc(object):
 
         if self.issue_date == "":
             # deterimine issue date from dates
-            # if no "note:" issue date is most recent 
+            # if no "note:" issue date is most recent
             NOTE_REGEX = re.compile(r"note:(.*)");
 #            print "$$$$$"
 #            print self.body
 #            print "$$$$$"
 #            m_note = NOTE_REGEX.search(self.body.rstrip("\n"))
 #            if m_note is not None:
-#                print "!!!" 
+#                print "!!!"
 #                print m_note.group(1).strip()
-#                print "!!!" 
+#                print "!!!"
 
 #
 #            print self.body
@@ -158,21 +158,22 @@ class UADoc(object):
         self.extract_year_info()
 
 
-
     ID_YEAR_REGEX = re.compile(r'([0-9]){1,4}\/([0-9]){2}')
+
     def extract_year_info(self):
         # The UA id is the (action # in the year) / (year)
-        match = self.ID_YEAR_REGEX.search(self.id)
-        if match is not None:
-            self.year_case_count = match.group(1)
-            self.year = int(match.group(2))
-
-            # we found a match. add the right century then convert back to a string.
-            if self.year > 50:
-                self.year += 1900
-            elif self.year < 20:
-                self.year += 2000      
-            self.year = str(self.year)
+        try:
+            year_case_count, year = self.id.split("/", 1)
+        except:
+            return
+        self.year_case_count = year_case_count
+        year = int(year)
+        # we found a match. add the right century then convert back to a string.
+        if year > 50:
+            year += 1900
+        elif year < 20:
+            year += 2000
+        self.year = str(year)
 
     ISSUE_DATE_REGEX  = re.compile(r"issue date\: *?([0-9]{1,2}) *?([a-z]+?)[, ]*?([0-9]{2,4})")
     ISSUE_DATE_REGEX2 = re.compile(r"issued ?o?n? \(?([0-9]{1,2}) *?([a-z]+?) *?([0-9]{2,4})\)?")
@@ -244,7 +245,7 @@ class UADoc(object):
 
     def parse_subject(self):
         self.subject = self.match_line(self.SUBJECT_REGEX)
-        
+
 
         if self.subject != "":
             # get the ID
@@ -256,14 +257,14 @@ class UADoc(object):
             m_action  = ACTION_REGEX.search(self.subject)
             if m_action is not None:
                 self.action = m_action.group(1).strip()
-            
+
             if self.action != "":
                 self.action = re.sub('\ on','',self.action)
                 self.action = re.sub('\ to','',self.action)
                 self.action = re.sub('\ of','',self.action)
             else:
                 self.action = "initial"
-        
+
             if m_action is None:
                 self.action = "unknown"
 
@@ -272,8 +273,8 @@ class UADoc(object):
 #                self.action = "stop action"
 #            elif "update" in self.subject:
 #                self.action = "update"
-                
-    
+
+
 
     COUNTRY_REGEX = re.compile(r"\|country: *?(.+?)\|")
     REGION_REGEX  = re.compile(r"(.+) \((.+)\)")
@@ -409,7 +410,7 @@ def main():
                 fout.writerow([
                     file_count, doc.id, doc.subject, doc.year, doc.year_case_count,
                     "|".join(doc.category), doc.country, doc.gender,
-                    doc.appeal_date, doc.issue_date, doc.action, "|".join(doc.dates), doc.body.replace("\n", "|")
+                    doc.appeal_date, doc.issue_date, doc.action, "|".join(doc.dates), doc.body.replace("\n", " ")
                 ])
 
                 # write raw text to a file
