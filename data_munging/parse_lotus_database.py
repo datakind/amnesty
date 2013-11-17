@@ -137,22 +137,6 @@ class UADoc(object):
             # deterimine issue date from dates
             # if no "note:" issue date is most recent
             NOTE_REGEX = re.compile(r"note:(.*)");
-#            print "$$$$$"
-#            print self.body
-#            print "$$$$$"
-#            m_note = NOTE_REGEX.search(self.body.rstrip("\n"))
-#            if m_note is not None:
-#                print "!!!"
-#                print m_note.group(1).strip()
-#                print "!!!"
-
-#
-#            print self.body
-#            print self.id
-#            print "!!!"
-#            print
-
-
 
         # extract the year/action count from the id.
         self.extract_year_info()
@@ -253,8 +237,18 @@ class UADoc(object):
             if m is not None:
                 self.id = m.group(1).strip()
 
-            ACTION_REGEX = re.compile(r"(.*?)ua")
+            ACTION_REGEX = re.compile(r"(.*?)[ua |uaa ]")
+            if "ua " in self.subject or "uaa " in self.subject:
+                ACTION_REGEX = re.compile(r"(.*?)ua ")
+            elif "ma " in self.subject or "medical action" in self.subject:
+                ACTION_REGEX = re.compile(r"(.*?)[medical action |ma ]")
+            elif "ex " in self.subject or "ex11" in self.subject:
+                ACTION_REGEX = re.compile(r"(.*?)[ex11 |ex ]")
+            elif "nsa " in self.subject or "refugee action " in self.subject:
+                ACTION_REGEX = re.compile(r"(.*?)[refugee action |nsa ]")
+
             m_action  = ACTION_REGEX.search(self.subject)
+
             if m_action is not None:
                 self.action = m_action.group(1).strip()
 
@@ -264,6 +258,13 @@ class UADoc(object):
                 self.action = re.sub('\ of','',self.action)
             else:
                 self.action = "initial"
+
+            if self.action == "s":
+                print self.action
+                self.action = "second"
+            elif self.action == "f":
+                print self.action
+                self.action = "final"
 
             if m_action is None:
                 self.action = "unknown"
@@ -393,7 +394,7 @@ def main():
                 if "nsa " in doc.subject or "refugee action" in doc.subject or "ns " in doc.subject:
                     doc.id = "nsa-"+doc.id
 
-                if "ex " in doc.subject or "ex11" in doc.subject or "ea " in doc.subject:
+                if "ex " in doc.subject or "ex11" in doc.subject:
                     doc.id = "ex-"+doc.id
 
 #                WRN_REGEX = re.compile(r"wrn")
