@@ -35,12 +35,6 @@ import re
 import csv
 import sys
 import datetime
-from dateutil.relativedelta import *
-from dateutil.easter import *
-from dateutil.rrule import *
-import dateutil.parser
-#from datetime import *
-
 USE_DB = False
 if "mongo" in sys.argv:
     USE_DB = True
@@ -52,7 +46,7 @@ OUTPUT_FILE = "../cleaned_data/lotus_database.csv"
 OUTPUT_DIR = "../cleaned_data/ua_files"
 
 BAD_CHARACTER_REGEX = re.compile(r'[\r\xbb\xbf\xef\xef\xbf\xbd]')
-
+DATE_TEMPLATE = 'issued on'
 
 class UADoc(object):
 
@@ -61,7 +55,6 @@ class UADoc(object):
     GENDER_REGEX      = re.compile(r"gender m/f: *(.+?)\|")
     CATEGORY_REGEX    = re.compile(r"\|categories: *(.+?)\|")
     BODY_REGEX        = re.compile(r"\|body:(.+?)\|[^\| ]+:")
-
 
     # a total hack to fix typos.
     STRING_TRANSLATION = [
@@ -111,7 +104,6 @@ class UADoc(object):
         line = self.text
         self.parse_subject()
 
-
         self.parse_country()
 
         self.parse_issue_date()
@@ -122,28 +114,19 @@ class UADoc(object):
 
         self.category = self.match_line(self.CATEGORY_REGEX).split(",")
 
-
         body = self.match_line(self.BODY_REGEX)
         self.body = re.sub("\|+", "\n", body)
-
 
         # just grab every known date in the whole document
         dates = self.ANY_DATE_REGEX.findall(self.text)
         dates = map(self.format_date, dates)
         self.dates = list(dates)
 
-
-        if self.issue_date == "":
-            # deterimine issue date from dates
-            # if no "note:" issue date is most recent
-            NOTE_REGEX = re.compile(r"note:(.*)");
-
         # extract the year/action count from the id.
         self.extract_year_info()
 
 
-    ID_YEAR_REGEX = re.compile(r'([0-9]){1,4}\/([0-9]){2}')
-
+    ID_YEAR_REGEX = re.compile(r'([0-9]){1,4}/([0-9]){2}')
     def extract_year_info(self):
         # The UA id is the (action # in the year) / (year)
         try:
@@ -164,7 +147,6 @@ class UADoc(object):
     ISSUE_DATE_REGEX3 = re.compile(r"issued ([0-9]{1,2}) *?([a-z]+?) *?([0-9]{2,4})")
     ISSUE_DATE_REGEX4 = re.compile(r"\(([0-9]{1,2}) *?([a-z]+?) *?([0-9]{2,4})\)")
     ISSUE_DATE_REGEX5 = re.compile(r"issue date\: ([a-z]+?) *?([0-9]{1,2})[, ]*?([0-9]{2,4})")
-
     def parse_issue_date(self):
         """
         Issue dates come in a few different formats. We'll try them all.
@@ -207,8 +189,6 @@ class UADoc(object):
         if self.issue_date != "":
             self.issue_date_version = 5
 
-
-
     def extract_date(self, dt_regex, match_offset=0, line=None):
         """
         Extracts a date from the text and returns it in YYYY-MM-DD format.
@@ -226,54 +206,19 @@ class UADoc(object):
         return ""
 
     SUBJECT_REGEX = re.compile(r"subject: *?(.+?)\|")
-
     def parse_subject(self):
         self.subject = self.match_line(self.SUBJECT_REGEX)
-
-
         if self.subject != "":
             # get the ID
             m = re.search(r"([0-9]{1,3}/[0-9]{1,3})", self.subject)
             if m is not None:
                 self.id = m.group(1).strip()
 
-            ACTION_REGEX = re.compile(r"(.*?)[ua |uaa ]")
-            if "ua " in self.subject or "uaa " in self.subject:
-                ACTION_REGEX = re.compile(r"(.*?)ua ")
-            elif "ma " in self.subject or "medical action" in self.subject:
-                ACTION_REGEX = re.compile(r"(.*?)[medical action |ma ]")
-            elif "ex " in self.subject or "ex11" in self.subject:
-                ACTION_REGEX = re.compile(r"(.*?)[ex11 |ex ]")
-            elif "nsa " in self.subject or "refugee action " in self.subject:
-                ACTION_REGEX = re.compile(r"(.*?)[refugee action |nsa ]")
-
-            m_action  = ACTION_REGEX.search(self.subject)
-
-            if m_action is not None:
-                self.action = m_action.group(1).strip()
-
-            if self.action != "":
-                self.action = re.sub('\ on','',self.action)
-                self.action = re.sub('\ to','',self.action)
-                self.action = re.sub('\ of','',self.action)
-            else:
-                self.action = "initial"
-
-            if self.action == "s":
-                self.action = "second"
-            elif self.action == "f":
-                self.action = "final"
-
-            if m_action is None:
-                self.action = "unknown"
-
             # get the action
-#            if "stop action" in self.subject:
-#                self.action = "stop action"
-#            elif "update" in self.subject:
-#                self.action = "update"
-
-
+            if "stop action" in self.subject:
+                self.action = "stop action"
+            elif "update" in self.subject:
+                self.action = "update"
 
     COUNTRY_REGEX = re.compile(r"\|country: *?(.+?)\|")
     REGION_REGEX  = re.compile(r"(.+) \((.+)\)")
@@ -307,7 +252,6 @@ class UADoc(object):
     def match_line(self, reg, grp=1, line=None):
         if line is None:
             line = self.text
-
         match = reg.search(line)
         if match is not None:
             return match.group(grp).strip()
@@ -358,7 +302,6 @@ def main():
     ])
 
     fin = open(INPUT_FILE, "r")
-
     file_count = 0
     doc = UADoc()
     line = ""
@@ -380,30 +323,15 @@ def main():
 
                 # all of the collection is done. Parse the document.
                 doc.finalize()
-
-                ## kill if wrn
-                if "wrn" in doc.subject:
-                    doc = UADoc()
-                    continue
-
-                if "ma " in doc.subject or "medical action" in doc.subject or "#ma " in doc.subject:
-                    doc.id = "ma-"+doc.id
-
-                if "nsa " in doc.subject or "refugee action" in doc.subject or "ns " in doc.subject:
-                    doc.id = "nsa-"+doc.id
-
-                if "ex " in doc.subject or "ex11" in doc.subject:
-                    doc.id = "ex-"+doc.id
-
-#                WRN_REGEX = re.compile(r"wrn")
-#        m_wrn = WRN_REGEX.search(self.subject)
-
-#        if m_wrn is not None:
-#            #removing wrn (see anu)
-#            self.subject = "remove"
-
-
-
+                if doc.issue_date.strip() == '':
+                    if DATE_TEMPLATE in doc.body and "note:" in doc.body:
+                        pos = doc.body.find(DATE_TEMPLATE)
+                        new_date = doc.body[pos+len(DATE_TEMPLATE):].split('.')[0].split(',')[0].split(':')[0]
+                        print(new_date)
+                        doc.issue_date = new_date
+                    else:
+                        if len(doc.dates) > 0:
+                            doc.issue_date = sorted(doc.dates, reverse=True)[0]
 
                 # write output to csv.
                 fout.writerow([
@@ -422,8 +350,6 @@ def main():
             # on to a new document
             doc = UADoc()
             file_count += 1
-#            if file_count>100:
-#                break
 
             continue
         # if it's not a new document, add the line to the existing one.
