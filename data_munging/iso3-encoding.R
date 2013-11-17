@@ -19,4 +19,4 @@ iso3[is.na(ios3)] <- iso3_category[is.na(iso3)]
 
 ai2 <- cbind(ai, iso3) # Adding columns (the safe way). 
 
-write.csv(ai2, file="../cleaned_data/lotus_database_w_iso3.csv") # output.
+write.csv(ai2, file="../cleaned_data/lotus_database_w_iso3.csv", row.names=FALSE) # output.

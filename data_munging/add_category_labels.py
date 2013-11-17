@@ -1,7 +1,9 @@
 import csv
 import pandas as pd
 import dataset
-import os
+import os, re
+from cat_mapping import cat_mapping
+
 
 event_types = {
   0 : None,
@@ -133,26 +135,53 @@ def assign_categories(raw_category_row):
   else:
     return {}
 
-def update_database(data):
+def clean_header(cat):
+  return re.sub("\s+", "_", cat).strip()
 
-  # assign the categories
-  cat_rows = [assign_categories(d['category']) for d in data ]
-
-  # identify set of unique keys
-  key_set = set([k for row in cat_rows for k in row.keys()])
+def assign_category_strings(raw_category_row):
   
+  # parse out categories
+  raw_category_list = [
+    c.strip() 
+    for c in raw_category_row.split("|") 
+    if c is not None and c !=''
+  ]
+  
+  if len(raw_category_list) > 0:
+    cat_dict = {}
+    for c in raw_category_list:
+     
+      if cat_mapping.has_key(c):
+        
+        clean_cat = cat_mapping[c]
+        cat_dict[clean_header(clean_cat)] = 1
+
+    return cat_dict
+  else:
+    return {}
+
+def fill_in_zeros(data):
+  key_set = set([k for row in data for k in row.keys()])
   # fill in rows with zeros
-  full_cat_rows = []
-  for row in cat_rows:
+  full_data = []
+  for row in data:
     for k in key_set:
       if not row.has_key(k):
         row[k] = 0
-      full_cat_rows.append(row)
+      full_data.append(row)
+  return full_data
+
+
+def update_database(data):
+
+  # assign the categories
+  cat_rows = fill_in_zeros([assign_categories(d['category']) for d in data ])
+  string_rows = fill_in_zeros([assign_category_strings(d['category']) for d in data])
 
   # join with original data:
   joined_data = []
   for i, d in enumerate(data):
-    joined_data.append(dict(d.items() + full_cat_rows[i].items()))
+    joined_data.append(dict(d.items() + cat_rows[i].items() + string_rows[i].items()))
 
   return joined_data
 
