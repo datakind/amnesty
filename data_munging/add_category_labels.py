@@ -1,5 +1,5 @@
 import csv
-# import pandas as pd
+import pandas as pd
 import dataset
 import os, re
 from cat_mapping import cat_mapping
@@ -154,7 +154,7 @@ def assign_category_strings(raw_category_row):
       if cat_mapping.has_key(c):
         
         clean_cat = cat_mapping[c]
-        cat_dict[clean_header(clean_cat)] = 1
+        cat_dict["cat_" + clean_header(clean_cat)] = 1
 
     return cat_dict
   else:
@@ -192,16 +192,15 @@ if __name__ == '__main__':
   updated_data = update_database(clean_data)
 
   # insert to postgres
-  print "inserting data into postgres"
+  print "inserting data into postgres..."
   db = dataset.connect(os.getenv('DATABASE_URL'))
   table = db['amnesty']
-  table.delete()
   table.insert_many(updated_data)
 
   # write csv
-  # print "writing data to csv"
-  # df = pd.DataFrame(updated_data)
-  # df.to_csv('../cleaned_data/lotus_database_w_iso3_and_cats.csv')
+  print "writing data to csv..."
+  df = pd.DataFrame(updated_data)
+  df.to_csv('../cleaned_data/lotus_database_w_iso3_and_cats.csv')
 
 
 
