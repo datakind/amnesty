@@ -1,9 +1,13 @@
 import csv
+import sys
 import pandas as pd
 import dataset
 import os, re
 from cat_mapping import cat_mapping
 
+UPDATE_DB = False
+if "updatedb" in sys.argv:
+    UPDATE_DB = True
 
 event_types = {
   0 : None,
@@ -101,23 +105,23 @@ for i, r in enumerate(reader):
 
 
 def assign_categories(raw_category_row):
-  
+
   # parse out categories
   raw_category_list = [
-    c.strip() 
-    for c in raw_category_row.split("|") 
+    c.strip()
+    for c in raw_category_row.split("|")
     if c is not None and c !=''
   ]
-  
+
   if len(raw_category_list) > 0:
     cat_dict = {}
     for c in raw_category_list:
-     
+
       if cat_lookup.has_key(c):
-        
+
         event_type = int(cat_lookup[c]['event_type'])
         class_type = int(cat_lookup[c]['classification'])
-        
+
         if event_type != 0:
           event_key = "event_%d" % event_type
           if cat_dict.has_key(event_key):
@@ -139,20 +143,20 @@ def clean_header(cat):
   return re.sub("\s+", "_", cat).strip()
 
 def assign_category_strings(raw_category_row):
-  
+
   # parse out categories
   raw_category_list = [
-    c.strip() 
-    for c in raw_category_row.split("|") 
+    c.strip()
+    for c in raw_category_row.split("|")
     if c is not None and c !=''
   ]
-  
+
   if len(raw_category_list) > 0:
     cat_dict = {}
     for c in raw_category_list:
-     
+
       if cat_mapping.has_key(c):
-        
+
         clean_cat = cat_mapping[c]
         cat_dict["cat_" + clean_header(clean_cat)] = 1
 
@@ -186,16 +190,17 @@ def update_database(data):
   return joined_data
 
 if __name__ == '__main__':
-  
+
   # update data
   print "updating data with categories..."
   updated_data = update_database(clean_data)
 
   # insert to postgres
-  print "inserting data into postgres..."
-  db = dataset.connect(os.getenv('DATABASE_URL'))
-  table = db['amnesty']
-  table.insert_many(updated_data)
+  if UPDATE_DB:
+    print "inserting data into postgres..."
+    db = dataset.connect(os.getenv('DATABASE_URL'))
+    table = db['amnesty']
+    table.insert_many(updated_data)
 
   # write csv
   print "writing data to csv..."
