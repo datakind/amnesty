@@ -20,7 +20,6 @@
 #
 
 class Amnesty < ActiveRecord::Base
-  set_table_name 'amnesty'
-
-  attr_accessible :category, :body, :issue_date, :gender
+	set_table_name 'amnesty'
+  # attr_accessible :title, :body
 end

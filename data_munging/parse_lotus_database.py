@@ -46,7 +46,7 @@ OUTPUT_FILE = "../cleaned_data/lotus_database.csv"
 OUTPUT_DIR = "../cleaned_data/ua_files"
 
 BAD_CHARACTER_REGEX = re.compile(r'[\r\xbb\xbf\xef\xef\xbf\xbd]')
-
+DATE_TEMPLATE = 'issued on'
 
 class UADoc(object):
 
@@ -139,7 +139,7 @@ class UADoc(object):
         if year > 50:
             year += 1900
         elif year < 20:
-            year += 2000      
+            year += 2000
         self.year = str(year)
 
     ISSUE_DATE_REGEX  = re.compile(r"issue date\: *?([0-9]{1,2}) *?([a-z]+?)[, ]*?([0-9]{2,4})")
@@ -323,6 +323,15 @@ def main():
 
                 # all of the collection is done. Parse the document.
                 doc.finalize()
+                if doc.issue_date.strip() == '':
+                    if DATE_TEMPLATE in doc.body and "note:" in doc.body:
+                        pos = doc.body.find(DATE_TEMPLATE)
+                        new_date = doc.body[pos+len(DATE_TEMPLATE):].split('.')[0].split(',')[0].split(':')[0]
+                        print(new_date)
+                        doc.issue_date = new_date
+                    else:
+                        if len(doc.dates) > 0:
+                            doc.issue_date = sorted(doc.dates, reverse=True)[0]
 
                 # write output to csv.
                 fout.writerow([

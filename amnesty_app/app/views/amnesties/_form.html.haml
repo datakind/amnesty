@@ -1,0 +1,10 @@
+= form_for @amnesty do |f|
+  - if @amnesty.errors.any?
+    #error_explanation
+      %h2= "#{pluralize(@amnesty.errors.count, "error")} prohibited this amnesty from being saved:"
+      %ul
+        - @amnesty.errors.full_messages.each do |msg|
+          %li= msg
+
+  .actions
+    = f.submit 'Save'
