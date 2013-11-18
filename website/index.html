@@ -1,6 +1,7 @@
 
 <!DOCTYPE html>
 <html>
+	<title>Amnesty Urgent Action Dashboard</title>
   <head>
     <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
     <script type="text/javascript" src="http://mbostock.github.io/d3/talk/20111018/d3/d3.js"></script>
@@ -16,14 +17,32 @@
     // <script src="js/jquery.dynamic-highchart.js"></script> -->
     <style type="text/css">
 
-svg {
-  width: 500px;
-  height: 500px;
+#globe svg {
   pointer-events: all;
+  cursor: pointer;
+  cursor: hand;
+}
+
+div.topStats{
+	margin-top: 5px;
+	margin-bottom: 5px;
+}
+
+div.thumb{
+	padding:0;
+	width: 100px;
+	height: 100px;
+	overflow: hidden;
 }
 
 circle {
   fill: #dbe4f0;
+}
+
+path.sparkline {
+    stroke: steelblue;
+    stroke-width: 1px;
+    fill: none;
 }
 
 path {
@@ -40,36 +59,32 @@ path {
   </head>
   <body>
   	<div class="container">
-	  	<div class="row">
-		  	<h1>Amnesty!</h1>
-	  	</div>
 	  	<div class="col-md-8" id="DataDash">
 		  	<div class="row">
-			  	<img style="height: 200px" src="images/take-action.png">
+			  	<img src="images/crisis-in-syria-GRAY.png">
 		  	</div>
+		  	<br/>
 		  	<div class="row">
 	  		  	<div class="col-md-4" id="DataSidebar">
-			        Amnesty UA Events: drag to rotate
-			        <!--<div><select>
-			          <option value="equalarea">equalarea</option>
-			          <option value="equidistant">equidistant</option>
-			          <option value="gnomonic">gnomonic</option>
-			          <option value="orthographic" selected>orthographic</option>
-			          <option value="stereographic">stereographic</option>
-			        </select></div>-->
+			        <h4>Urgent Action Globe</h4>
+			        <input id="theYear" type=number onchange="updateYear()" placeholder="year" min=1998 max=2013 step=1/>
+			        
 			        <div><select id="metricPicker" onchange="updateGlobe()">
-			          <option value="count">Total Number of Incidents</option>
+			          <option value="count" selected>Total Number of Incidents</option>
 			          <option value="population">Population</option>
-			          <option value="countPerMillion" selected>UAs By Population</option>
+			          <option value="countPerMillion">UAs By Population</option>
 			        </select>
 			        </div>
 			        <div id="CountryDetailsFromGlobe">
-						<h4 id="countryName">Click to see Details</h4>
+						<h5 id="countryName">Click to see Details</h5>
 						<table>
 						<tr><td>Pop: </td><td id="countryPopulation"></td></tr>
 						<tr><td>Num UAs: </td><td id="numTotalUAs"></td></tr>
 						<tr><td>UAs/million: </td><td id="UAsPerMillion"></td></tr>
 						</table>
+						<div>Top UA Categories:</div>
+						<div id="topUACategories"></div>
+						<div id="sparkLine"></div>
 			        </div>
 	  		  	</div>
 				<div class="col-md-4" id="GlobeHolder">
@@ -103,20 +118,21 @@ path {
 	  	<div class="col-md-4" id="DataSidebar">
 		  	<h3 style="text-align: center">Alerts Dash</h3>
 		  		<!-- remove style line once you've filled it with content -->
-          <div>
+          <!--<div>
             <h4>2012 Urgent Action Numbers</h4>
             Loss of Life Total and By Quarter<br><br>
             <img height=150 src="images/cross-09.png">
-          </div>
+          </div>-->
 			  	<div>
 				  	<h4>Most Actions By Country</h4>
-            <ol id="TopStats"></ol>
+				  	<!--<ol id="TopStats"></ol>-->
+				  	<div id="TopStats"></div>
 			  	</div>
-          <div>
+          <!--<div>
             <h4>Accomplishments: Resolved UAs by Country</h4>
           Accounting for Population<br>
           <img width=350 height=100 src="images/cross-12.png">
-          </div>
+          </div>-->
 			  	<div>
               <h4>Ending Soon:</h4>
               <ul id="EndingSoon" class="EndingSoon"></ul>
@@ -133,6 +149,12 @@ path {
   	</div>
     <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
     <script type="text/javascript">
+
+var minYear=1998;
+var maxYear=2013;
+
+var yearRange=[1998,2013];
+var currentYear = null;
 
 var feature;
 
@@ -173,22 +195,38 @@ var fieldDetails={
 	"countPerMillion":{"min":null,"max":null,"hue":340,"colorScale":null}
 }
 
-var theField = "countPerMillion";
+var theField = "count";
 
 d3.json("world-countries.json", function(collection) {
 	theData=collection.features;
-	d3.json("baseCount.json", function(counts) {
+	d3.json("mergedCountryData.json", function(countryData) {
 	//countMax = d3.max()
 	
-	countMax=0;
 	for(var i in theData){
 		var countryKey = theData[i]["id"];
 		//console.log(theData[i]["id"]);
 
-		if(counts[countryKey]){
-			theData[i]["count"]=counts[countryKey]["count"];
-			theData[i]["population"]=populations[countryKey];
-			theData[i]["countPerMillion"]=counts[countryKey]["count"]/(populations[countryKey]/1000000.);
+		if(countryData[countryKey]){
+			theData[i]["count"]=countryData[countryKey]["count"];
+			theData[i]["population"]=countryData[countryKey]["population"];
+			theData[i]["countPerMillion"]=countryData[countryKey]["count"]/(1.0*countryData[countryKey]["population"]/1000000.);
+			theData[i]["countYearly"]=[];
+			theData[i]["countPerMillionYearly"]=[];
+			for(var y=minYear; y<maxYear+1; y++){
+				theData[i]["countYearly"].push([y,0]);
+				theData[i]["countPerMillionYearly"].push([y,0]);
+			}
+			for(var ix in countryData[countryKey]["actionTimeline"]){
+				var tYear = countryData[countryKey]["actionTimeline"][ix]["year"];
+				var tCount = countryData[countryKey]["actionTimeline"][ix]["count"];
+				console.log(tCount);
+				var tIX = Math.floor(tYear - minYear);
+				theData[i]["countYearly"][tIX][1]=tCount;
+				theData[i]["countPerMillionYearly"][tIX][1]=tCount/(1.0*theData[i]["population"]/1000000.);
+			}
+
+			theData[i]["topCategories"]=countryData[countryKey]["topCategories"];
+
 			for(var j in fields){
 				var f=fields[j];
 				fieldDetails[f]["max"] = (fieldDetails[f]["max"]==null || fieldDetails[f]["max"]<theData[i][f])?theData[i][f]:fieldDetails[f]["max"];
@@ -220,14 +258,32 @@ d3.json("world-countries.json", function(collection) {
 	});
 });
 
-
 function getColor(d){
+	console.log("getting the color!");
 	if(d[theField]){
-		return "hsl("+fieldDetails[theField]["hue"]+",60%,"+fieldDetails[theField]["colorScale"](d[theField])+"%)";
+		var num = d[theField];
+
+		if(currentYear){
+			var key=theField+"Yearly"
+			console.log(key);
+			console.log(d);
+			console.log(d[key]);
+			var ix = Math.floor(currentYear-minYear);
+			console.log(ix);
+			num = d[key][ix][1]*12.;
+			console.log(num);
+		}
+		return "hsl("+fieldDetails[theField]["hue"]+",60%,"+fieldDetails[theField]["colorScale"](num)+"%)";	
 	}
 	else{
 		return "lightgrey";
 	}
+}
+
+function updateYear(){
+	console.log("Updated the year!");
+	currentYear=$("#theYear").val();
+	updateGlobe();
 }
 
 function populateCountryDetails(d){
@@ -236,11 +292,14 @@ function populateCountryDetails(d){
 		$("#countryPopulation").html(d.population);
 		$("#numTotalUAs").html(d.count);
 		$("#UAsPerMillion").html(parseFloat(d.countPerMillion.toPrecision(4)));
+		$("#topUACategories").html("<ul><li>"+d["topCategories"][0].replace(/_/g," ")+"</li><li>"+d["topCategories"][1].replace(/_/g," ")+"</li><li>"+d["topCategories"][2].replace(/_/g," ")+"</li></ul>")
+		//drawUAHistory(d);
 	}
 	else{
 		$("#countryPopulation").empty();
 		$("#numTotalUAs").empty();
 		$("#UAsPerMillion").empty();		
+		//drawUAHistory(null)
 	}
 }
 
@@ -291,7 +350,7 @@ function clip(d) {
 
 function updateGlobe(){
 	var newField=$("#metricPicker option:selected").val();
-	if(newField==theField){return false;}
+	if(newField==theField && currentYear==null){return false;}
 	theField=newField;
 	console.log(fieldDetails[theField]);
 	svg.selectAll("path")
@@ -300,6 +359,52 @@ function updateGlobe(){
 						.attr("fill",getColor);
 }
 
+/*var sparkLine = d3.select("#sparkLine").append("svg:svg").append("svg:g");
+
+function drawUAHistory(countryData){
+	var data = [];
+	for(var i=minYear; i<maxYear+1; i++){
+		data.push([minYear+i,0]);
+	}
+	var maxCount=0;
+	if(countryData){
+		for(var i in countryData["actions"]){
+			var a = countryData["actions"][i];
+			var theYear = a["year"];
+			var count = a["count"];
+			maxCount = (maxCount<count)?count:maxCount;
+			var ix=theYear - minYear;
+			data[ix]=[theYear,count];
+		}
+	}
+	else{
+		maxCount=5;
+	}
+	
+	var sparkWidth = 250,
+	sparkHeight = 150,
+	sparkMargin = 20,
+	sparkX = d3.scale.linear().domain([minYear, maxYear]).range([0 + sparkMargin, sparkWidth - sparkMargin])
+	sparkY = d3.scale.linear().domain([0, maxCount]).range([sparkHeight - sparkMargin,0 + sparkMargin]);
+
+	var line = d3.svg.line()
+	    .x(function(d) { return sparkX(d[0]); })
+	    .y(function(d) { return sparkY(d[1]); })
+	
+	sparkLine.selectAll('path.sparkLine')
+	    .data([data])
+	    .enter()
+	    	.append("svg:path")
+			.attr("d", line)
+			.attr("class","sparkLine")
+		//.update()
+		//	.transition()
+		//	.duration(500)
+		//	.attr("d", line);
+			
+}*/
+
+// ------------------------ populate page sections ---------------------------
 function db_query(query, callback){
     $.ajax({
       url:"http://54.242.238.152:5000",
@@ -319,7 +424,7 @@ function recent_alerts(){
     db_query("select iso3, body, subject from amnesty where iso3='" + iso + "' order by issue_date desc limit 5", 
       function(data){
       for (var i=0; i< data.length; i++) {
-        $("#recent-countries").append('<li class="TopStats"><b>' + iso + ":</b><br/><u>" + data[i].subject + '</u><br/>' + data[i].body.substring(0,100) + "... </li>")
+        $("#recent-countries").append('<div class=\"row topStats\"><div class=\"col-md-2 thumb\"><img src=\"images/thumbnail'+Math.floor((Math.random()*3)+1)+'.png\" width=100 height=100></div><div class="col-md-10 TopStats"><b>' + iso + ":</b><br/><a href=\"detail.html\">" + data[i].subject + '</a><br/>' + data[i].body.substring(0,100) + "... </div></div>")
       }
     });
 };
@@ -329,7 +434,7 @@ $(document).ready(function() {
   // ENDING SOON
   db_query("select appeal_date, subject from amnesty order by appeal_date desc limit 5", function(data) { 
     for(var i=0; i<data.length; i++) {
-      $("#EndingSoon").append('<li class="EndingSoon"><b>' + data[i].appeal_date + "</b> - " + data[i].subject + '</li>');
+      $("#EndingSoon").append('<li class="EndingSoon"><b>' + data[i].appeal_date + "</b> - <a href=\"detail.html\">" + data[i].subject + '</a></li>');
     }});
 
   // TOP STATS
@@ -339,10 +444,10 @@ $(document).ready(function() {
   }});
 
   // TOP STATS
-  db_query("select country, count(*) as actions from amnesty group by country order by actions desc limit 3", function(data) { 
+  /*db_query("select country, count(*) as actions from amnesty group by country order by actions desc limit 3", function(data) { 
     for(var i=0; i<data.length; i++) {
       $("#TopStats").append('<li class="TopStats"><b>' + data[i].country + '</b> - ' + data[i].actions + '</li>');
-  }});    
+  }});*/
   recent_alerts()
   $("#countries").change(
     recent_alerts
